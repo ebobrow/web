@@ -13,7 +13,7 @@ use tokio::{
 
 pub struct App {
     addr: SocketAddr,
-    // gets: HashMap<String, A>,
+    gets: HashMap<String, Box<dyn Fn() -> String>>,
 }
 
 impl App {
@@ -22,13 +22,16 @@ impl App {
 
         Ok(Self {
             addr,
-            // gets: HashMap::new(),
+            gets: HashMap::new(),
         })
     }
 
-    // pub fn get(&mut self, route: String, handler: A) {
-    //     self.gets.insert(route, handler);
-    // }
+    // TODO: Use macros instead, like:
+    // #[web::get("/")]
+    // fn home() { /* ... */ }
+    pub fn get(&mut self, route: impl ToString, handler: Box<dyn Fn() -> String>) {
+        self.gets.insert(route.to_string(), handler);
+    }
 
     #[tokio::main]
     pub async fn listen(self) {
@@ -72,6 +75,7 @@ async fn handle_connection(mut stream: TcpStream) {
     stream.flush().await.unwrap();
 }
 
+// TODO: Write tests
 #[cfg(test)]
 mod tests {
     #[test]
