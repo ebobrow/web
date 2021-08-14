@@ -9,6 +9,11 @@ use tokio::{
     net::{TcpListener, TcpStream},
 };
 
+use crate::response::Response;
+
+pub mod response;
+
+// TODO: Extract to app file
 pub struct App {
     addr: SocketAddr,
     // gets: HashMap<String, Box<dyn Fn() -> String>>,
@@ -30,16 +35,9 @@ impl App {
     // fn home() { /* ... */ }
     pub fn get(&mut self, route: impl ToString, handler: Box<dyn Fn() -> String>) {
         // TODO: Run functions after request so that Request object can be passed
-        let to_send = handler();
-        let status_line = "HTTP/1.1 200 OK";
         self.gets.insert(
             format!("GET {} HTTP/1.1\r\n", route.to_string()),
-            format!(
-                "{}\r\nContent-Length: {}\r\n\r\n{}",
-                status_line,
-                to_send.len(),
-                to_send
-            ),
+            Response::new(handler(), 200).format_for_response(),
         );
     }
 

@@ -8,7 +8,3 @@ edition = "2018"
 
 [dependencies]
 web = { version = "0.1.0", path = "../web" }
-
-[[example]]
-name = "simple"
-path = "simple.rs"
