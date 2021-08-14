@@ -1,19 +1,18 @@
 use std::{
     collections::HashMap,
-    fs, io,
+    io,
     net::{SocketAddr, ToSocketAddrs},
-    time::Duration,
 };
 
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
-    time,
 };
 
 pub struct App {
     addr: SocketAddr,
-    gets: HashMap<String, Box<dyn Fn() -> String>>,
+    // gets: HashMap<String, Box<dyn Fn() -> String>>,
+    gets: HashMap<String, String>,
 }
 
 impl App {
@@ -30,7 +29,18 @@ impl App {
     // #[web::get("/")]
     // fn home() { /* ... */ }
     pub fn get(&mut self, route: impl ToString, handler: Box<dyn Fn() -> String>) {
-        self.gets.insert(route.to_string(), handler);
+        // TODO: Run functions after request so that Request object can be passed
+        let to_send = handler();
+        let status_line = "HTTP/1.1 200 OK";
+        self.gets.insert(
+            format!("GET {} HTTP/1.1\r\n", route.to_string()),
+            format!(
+                "{}\r\nContent-Length: {}\r\n\r\n{}",
+                status_line,
+                to_send.len(),
+                to_send
+            ),
+        );
     }
 
     #[tokio::main]
@@ -39,37 +49,26 @@ impl App {
 
         loop {
             let (socket, _) = listener.accept().await.unwrap();
+            let gets = self.gets.clone(); // TODO: Better way?
             tokio::spawn(async move {
-                handle_connection(socket).await;
+                handle_connection(socket, gets).await;
             });
         }
     }
 }
 
-async fn handle_connection(mut stream: TcpStream) {
+// TODO: Make method on `App` instead of passing gets
+async fn handle_connection(mut stream: TcpStream, gets: HashMap<String, String>) {
     let mut buffer = [0; 1024];
     stream.read(&mut buffer).await.unwrap();
 
-    let get = b"GET / HTTP/1.1\r\n";
-    let sleep = b"GET /sleep HTTP/1.1\r\n";
-
-    let (status_line, filename) = if buffer.starts_with(get) {
-        ("HTTP/1.1 200 OK", "examples/hello.html")
-    } else if buffer.starts_with(sleep) {
-        time::sleep(Duration::from_secs(5)).await;
-        ("HTTP/1.1 200 OK", "examples/hello.html")
-    } else {
-        ("HTTP/1.1 404 NOT FOUND", "examples/404.html")
+    let response = match gets
+        .into_iter()
+        .find(|(k, _)| buffer.starts_with(k.as_bytes()))
+    {
+        Some((_, res)) => res,
+        None => String::new(),
     };
-
-    let contents = fs::read_to_string(filename).unwrap();
-
-    let response = format!(
-        "{}\r\nContent-Length: {}\r\n\r\n{}",
-        status_line,
-        contents.len(),
-        contents
-    );
 
     stream.write(response.as_bytes()).await.unwrap();
     stream.flush().await.unwrap();
