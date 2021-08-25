@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     io,
     net::{SocketAddr, ToSocketAddrs},
+    sync::{Arc, Mutex},
 };
 
 use tokio::{
@@ -11,13 +12,13 @@ use tokio::{
 
 use crate::response::Response;
 
-pub mod response;
+mod response;
 
 // TODO: Extract to app file
 pub struct App {
     addr: SocketAddr,
     // gets: HashMap<String, Box<dyn Fn() -> String>>,
-    gets: HashMap<String, String>,
+    gets: Arc<Mutex<HashMap<String, String>>>,
 }
 
 impl App {
@@ -26,7 +27,8 @@ impl App {
 
         Ok(Self {
             addr,
-            gets: HashMap::new(),
+            // gets: Arc::new(Mutex::new(HashMap::new())),
+            gets: Default::default(),
         })
     }
 
@@ -35,7 +37,8 @@ impl App {
     // fn home() { /* ... */ }
     pub fn get(&mut self, route: impl ToString, handler: Box<dyn Fn() -> String>) {
         // TODO: Run functions after request so that Request object can be passed
-        self.gets.insert(
+        let mut gets = self.gets.lock().unwrap();
+        gets.insert(
             format!("GET {} HTTP/1.1\r\n", route.to_string()),
             Response::new(handler(), 200).format_for_response(),
         );
@@ -45,34 +48,38 @@ impl App {
     pub async fn listen(self) {
         let listener = TcpListener::bind(self.addr).await.unwrap();
 
+        let slf = Arc::new(Mutex::new(self));
         loop {
             let (socket, _) = listener.accept().await.unwrap();
-            let gets = self.gets.clone(); // TODO: Better way?
+            let slf = slf.clone();
             tokio::spawn(async move {
-                handle_connection(socket, gets).await;
+                App::handle_connection(slf, socket).await;
             });
         }
     }
+
+    async fn handle_connection(slf: Arc<Mutex<Self>>, mut stream: TcpStream) {
+        let mut buffer = [0; 1024];
+        stream.read(&mut buffer).await.unwrap();
+
+        let response = {
+            let slf = slf.lock().unwrap();
+            let gets = slf.gets.lock().unwrap();
+            match gets
+                .clone()
+                .into_iter()
+                .find(|(k, _)| buffer.starts_with(k.as_bytes()))
+            {
+                Some((_, res)) => res,
+                None => String::new(),
+            }
+        };
+
+        stream.write(response.as_bytes()).await.unwrap();
+        stream.flush().await.unwrap();
+    }
 }
 
-// TODO: Make method on `App` instead of passing gets
-async fn handle_connection(mut stream: TcpStream, gets: HashMap<String, String>) {
-    let mut buffer = [0; 1024];
-    stream.read(&mut buffer).await.unwrap();
-
-    let response = match gets
-        .into_iter()
-        .find(|(k, _)| buffer.starts_with(k.as_bytes()))
-    {
-        Some((_, res)) => res,
-        None => String::new(),
-    };
-
-    stream.write(response.as_bytes()).await.unwrap();
-    stream.flush().await.unwrap();
-}
-
-// TODO: Write tests
 #[cfg(test)]
 mod tests {
     #[test]
