@@ -1,3 +1,5 @@
+use crate::response::Response;
+
 pub enum Method {
     GET,
     POST,
@@ -8,11 +10,11 @@ pub enum Method {
 pub struct Endpoint {
     route: String,
     method: Method,
-    cb: Box<dyn Fn() -> String + Send + 'static>,
+    cb: Box<dyn Fn() -> Response + Send + 'static>,
 }
 
 impl Endpoint {
-    pub fn new<T: Send + Fn() -> String + 'static>(route: String, method: Method, cb: T) -> Self {
+    pub fn new<T: Send + Fn() -> Response + 'static>(route: String, method: Method, cb: T) -> Self {
         Endpoint {
             route,
             method,
@@ -28,6 +30,6 @@ impl Endpoint {
     }
 
     pub fn invoke(&self) -> String {
-        (self.cb)()
+        (self.cb)().format_for_response()
     }
 }

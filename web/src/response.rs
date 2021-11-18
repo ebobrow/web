@@ -1,3 +1,5 @@
+use std::{fs, path::Path};
+
 use phf::phf_map;
 
 pub struct Response {
@@ -76,11 +78,35 @@ static STATUS_CODES: phf::Map<&'static str, usize> = phf_map! {
 };
 
 impl Response {
-    pub fn new(content: String, status_code: usize) -> Self {
+    pub fn new() -> Self {
         Self {
-            content,
-            status_code,
+            content: String::new(),
+            status_code: 200,
         }
+    }
+
+    pub fn serve_file<P>(mut self, path: P) -> Self
+    where
+        P: AsRef<Path>,
+    {
+        self.content = match fs::read_to_string(path) {
+            Ok(content) => content,
+            Err(_) => {
+                self.status_code = 404;
+                fs::read_to_string("web/static/404.html").unwrap()
+            }
+        };
+        self
+    }
+
+    pub fn status(mut self, status: usize) -> Self {
+        self.status_code = status;
+        self
+    }
+
+    pub fn content(mut self, content: String) -> Self {
+        self.content = content;
+        self
     }
 
     pub fn format_for_response(&self) -> String {
@@ -109,12 +135,11 @@ mod tests {
     #[test]
     fn format_response() {
         let content = String::from("hello");
-        let status_code = 200;
 
         let expected = "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello";
 
         assert_eq!(
-            Response::new(content, status_code).format_for_response(),
+            Response::new().content(content).format_for_response(),
             expected
         );
     }

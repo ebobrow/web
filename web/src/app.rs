@@ -9,7 +9,10 @@ use tokio::{
     net::{TcpListener, TcpStream},
 };
 
-use crate::endpoint::{Endpoint, Method};
+use crate::{
+    endpoint::{Endpoint, Method},
+    response::Response,
+};
 
 pub struct App {
     addr: SocketAddr,
@@ -31,18 +34,17 @@ impl App {
     // TODO: Use macros instead, like:
     // #[web::get("/")]
     // async fn home() { /* ... */ }
-
-    // pub fn get(&mut self, route: impl ToString, handler: Box<dyn Fn() -> String>) {
-    //     // TODO: Run functions after request so that Request object can be passed
-    //     let mut gets = self.gets.lock().unwrap();
-    //     gets.insert(
-    //         format!("GET {} HTTP/1.1\r\n", route.to_string()),
-    //         Response::new(handler(), 200).format_for_response(),
-    //     );
-    // }
-    pub fn get<T: Fn() -> String + Send + 'static>(&mut self, route: impl ToString, handler: T) {
+    pub fn get<T: Fn() -> Response + Send + 'static>(&mut self, route: impl ToString, handler: T) {
         self.endpoints
             .push(Endpoint::new(route.to_string(), Method::GET, handler));
+    }
+    pub fn put<T: Fn() -> Response + Send + 'static>(&mut self, route: impl ToString, handler: T) {
+        self.endpoints
+            .push(Endpoint::new(route.to_string(), Method::PUT, handler));
+    }
+    pub fn post<T: Fn() -> Response + Send + 'static>(&mut self, route: impl ToString, handler: T) {
+        self.endpoints
+            .push(Endpoint::new(route.to_string(), Method::POST, handler));
     }
 
     #[tokio::main]
@@ -65,12 +67,12 @@ impl App {
 
         let response = {
             let routes = endpoints.lock().unwrap();
-            let (status_line, contents) = routes.iter().find(|r| r.matches(&buffer)).map_or(
-                ("HTTP/1.1 404 NOT FOUND\r\n\r\n", String::new()),
-                |endpoint| ("HTTP/1.1 200 OK\r\n\r\n", endpoint.invoke()),
-            );
-
-            format!("{}{}", status_line, contents)
+            routes
+                .iter()
+                .find(|r| r.matches(&buffer))
+                .map_or(String::from("HTTP/1.1 404 NOT FOUND\r\n\r\n"), |endpoint| {
+                    endpoint.invoke()
+                })
         };
         stream.write(response.as_bytes()).await.unwrap();
         stream.flush().await.unwrap();

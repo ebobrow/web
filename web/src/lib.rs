@@ -1,6 +1,6 @@
 pub mod app;
 mod endpoint;
-mod response;
+pub mod response;
 
 pub use crate::app::App;
 
