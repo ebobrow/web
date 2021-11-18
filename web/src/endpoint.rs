@@ -10,11 +10,16 @@ pub enum Method {
 pub struct Endpoint {
     route: String,
     method: Method,
-    cb: Box<dyn Fn() -> Response + Send + 'static>,
+    // TODO: Can this be encapsulated in a type/trait?
+    cb: Box<dyn Fn(&mut Response) -> () + Send + 'static>,
 }
 
 impl Endpoint {
-    pub fn new<T: Send + Fn() -> Response + 'static>(route: String, method: Method, cb: T) -> Self {
+    pub fn new<T: Send + Fn(&mut Response) -> () + 'static>(
+        route: String,
+        method: Method,
+        cb: T,
+    ) -> Self {
         Endpoint {
             route,
             method,
@@ -30,6 +35,8 @@ impl Endpoint {
     }
 
     pub fn invoke(&self) -> String {
-        (self.cb)().format_for_response()
+        let mut res = Response::new();
+        (self.cb)(&mut res);
+        res.format_for_response()
     }
 }

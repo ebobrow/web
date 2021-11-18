@@ -16,8 +16,6 @@ use crate::{
 
 pub struct App {
     addr: SocketAddr,
-    // gets: Arc<Mutex<HashMap<String, String>>>,
-    // gets: HashMap<String, tokio::task::JoinHandle<String>>,
     endpoints: Vec<Endpoint>,
 }
 
@@ -34,15 +32,27 @@ impl App {
     // TODO: Use macros instead, like:
     // #[web::get("/")]
     // async fn home() { /* ... */ }
-    pub fn get<T: Fn() -> Response + Send + 'static>(&mut self, route: impl ToString, handler: T) {
+    pub fn get<T: Fn(&mut Response) -> () + Send + 'static>(
+        &mut self,
+        route: impl ToString,
+        handler: T,
+    ) {
         self.endpoints
             .push(Endpoint::new(route.to_string(), Method::GET, handler));
     }
-    pub fn put<T: Fn() -> Response + Send + 'static>(&mut self, route: impl ToString, handler: T) {
+    pub fn put<T: Fn(&mut Response) -> () + Send + 'static>(
+        &mut self,
+        route: impl ToString,
+        handler: T,
+    ) {
         self.endpoints
             .push(Endpoint::new(route.to_string(), Method::PUT, handler));
     }
-    pub fn post<T: Fn() -> Response + Send + 'static>(&mut self, route: impl ToString, handler: T) {
+    pub fn post<T: Fn(&mut Response) -> () + Send + 'static>(
+        &mut self,
+        route: impl ToString,
+        handler: T,
+    ) {
         self.endpoints
             .push(Endpoint::new(route.to_string(), Method::POST, handler));
     }
