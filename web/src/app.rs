@@ -11,6 +11,7 @@ use tokio::{
 
 use crate::{
     endpoint::{Endpoint, Method},
+    request::Request,
     response::Response,
 };
 
@@ -32,7 +33,7 @@ impl App {
     // TODO: Use macros instead, like:
     // #[web::get("/")]
     // async fn home() { /* ... */ }
-    pub fn get<T: Fn(&mut Response) -> () + Send + 'static>(
+    pub fn get<T: Fn(&Request, &mut Response) -> () + Send + 'static>(
         &mut self,
         route: impl ToString,
         handler: T,
@@ -40,7 +41,7 @@ impl App {
         self.endpoints
             .push(Endpoint::new(route.to_string(), Method::GET, handler));
     }
-    pub fn put<T: Fn(&mut Response) -> () + Send + 'static>(
+    pub fn put<T: Fn(&Request, &mut Response) -> () + Send + 'static>(
         &mut self,
         route: impl ToString,
         handler: T,
@@ -48,7 +49,7 @@ impl App {
         self.endpoints
             .push(Endpoint::new(route.to_string(), Method::PUT, handler));
     }
-    pub fn post<T: Fn(&mut Response) -> () + Send + 'static>(
+    pub fn post<T: Fn(&Request, &mut Response) -> () + Send + 'static>(
         &mut self,
         route: impl ToString,
         handler: T,
@@ -74,14 +75,15 @@ impl App {
     async fn handle_connection(endpoints: Arc<Mutex<Vec<Endpoint>>>, mut stream: TcpStream) {
         let mut buffer = [0; 1024];
         stream.read(&mut buffer).await.unwrap();
+        let request = Request::new(&buffer);
 
         let response = {
             let routes = endpoints.lock().unwrap();
             routes
                 .iter()
-                .find(|r| r.matches(&buffer))
+                .find(|r| r.matches(&request))
                 .map_or(String::from("HTTP/1.1 404 NOT FOUND\r\n\r\n"), |endpoint| {
-                    endpoint.invoke()
+                    endpoint.invoke(&request)
                 })
         };
         stream.write(response.as_bytes()).await.unwrap();
