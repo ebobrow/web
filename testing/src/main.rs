@@ -10,8 +10,9 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-async fn home(req: Request) -> Response {
+fn home(req: Request) -> Response {
     println!("GET to /");
+    let mut res = Response::new();
     res.serve_file("testing/hello.html");
     res
 }

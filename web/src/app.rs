@@ -1,5 +1,4 @@
 use std::{
-    future::Future,
     io,
     net::{SocketAddr, ToSocketAddrs},
     sync::{Arc, Mutex},
@@ -34,21 +33,18 @@ impl App {
     // TODO: Use macros instead, like:
     // #[web::get("/")]
     // async fn home() { /* ... */ }
-    pub fn get<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
-    where
-        T: Future<Output = Response> + 'static,
-    {
+    pub fn get(&mut self, route: impl ToString, handler: fn(Request) -> Response) {
         self.endpoints
             .push(Endpoint::new(route.to_string(), Method::GET, handler));
     }
-    // pub fn put(&mut self, route: impl ToString, handler: Cb) {
-    //     self.endpoints
-    //         .push(Endpoint::new(route.to_string(), Method::PUT, handler));
-    // }
-    // pub fn post(&mut self, route: impl ToString, handler: Cb) {
-    //     self.endpoints
-    //         .push(Endpoint::new(route.to_string(), Method::POST, handler));
-    // }
+    pub fn put(&mut self, route: impl ToString, handler: fn(Request) -> Response) {
+        self.endpoints
+            .push(Endpoint::new(route.to_string(), Method::PUT, handler));
+    }
+    pub fn post(&mut self, route: impl ToString, handler: fn(Request) -> Response) {
+        self.endpoints
+            .push(Endpoint::new(route.to_string(), Method::POST, handler));
+    }
 
     #[tokio::main]
     pub async fn listen(self) {
@@ -71,11 +67,14 @@ impl App {
 
         let response = {
             let routes = endpoints.lock().unwrap();
-            (routes.iter().find(|r| r.matches(&request)).unwrap().cb)(request)
-            // routes.iter().find(|r| r.matches(&request)).unwrap().cb
+            (routes
+                .iter()
+                .find(|r| r.matches(&request))
+                .unwrap_or(&Default::default())
+                .cb)(request)
         };
         stream
-            .write(response.await.format_for_response().as_bytes())
+            .write(response.format_for_response().as_bytes())
             .await
             .unwrap();
         stream.flush().await.unwrap();
