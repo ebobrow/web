@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 web = { version = "0.1.0", path = "../web" }
+macros = { version = "0.1.0", path = "../macros" }
