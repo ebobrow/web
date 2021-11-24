@@ -30,18 +30,16 @@ impl App {
         })
     }
 
-    // TODO: Use macros instead, like:
-    // #[web::get("/")]
-    // async fn home() { /* ... */ }
-    pub fn get(&mut self, route: impl ToString, handler: fn(Request) -> Response) {
+    // TODO: macro generated methods
+    pub fn get(&mut self, route: impl ToString, handler: fn(Request, &mut Response) -> ()) {
         self.endpoints
             .push(Endpoint::new(route.to_string(), Method::GET, handler));
     }
-    pub fn put(&mut self, route: impl ToString, handler: fn(Request) -> Response) {
+    pub fn put(&mut self, route: impl ToString, handler: fn(Request, &mut Response) -> ()) {
         self.endpoints
             .push(Endpoint::new(route.to_string(), Method::PUT, handler));
     }
-    pub fn post(&mut self, route: impl ToString, handler: fn(Request) -> Response) {
+    pub fn post(&mut self, route: impl ToString, handler: fn(Request, &mut Response) -> ()) {
         self.endpoints
             .push(Endpoint::new(route.to_string(), Method::POST, handler));
     }
@@ -66,12 +64,14 @@ impl App {
         let request = Request::new(&buffer);
 
         let response = {
+            let mut response = Response::new();
             let routes = endpoints.lock().unwrap();
             (routes
                 .iter()
                 .find(|r| r.matches(&request))
                 .unwrap_or(&Default::default())
-                .cb)(request)
+                .cb)(request, &mut response);
+            response
         };
         stream
             .write(response.format_for_response().as_bytes())

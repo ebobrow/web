@@ -1,9 +1,9 @@
 use crate::{request::Request, response::Response};
 
-type Cb = Box<dyn Fn(Request) -> Response + Send>;
+type Cb = Box<dyn Fn(Request, &mut Response) -> () + Send>;
 
-fn make_cb(f: fn(Request) -> Response) -> Cb {
-    Box::new(move |req| f(req))
+fn make_cb(f: fn(Request, &mut Response) -> ()) -> Cb {
+    Box::new(move |req, res| f(req, res))
 }
 
 #[derive(PartialEq)]
@@ -21,7 +21,7 @@ pub struct Endpoint {
 }
 
 impl Endpoint {
-    pub fn new(route: String, method: Method, cb: fn(Request) -> Response) -> Self {
+    pub fn new(route: String, method: Method, cb: fn(Request, &mut Response) -> ()) -> Self {
         Endpoint {
             route,
             method,
@@ -43,8 +43,11 @@ impl Default for Endpoint {
     }
 }
 
-fn default(_: Request) -> Response {
-    Response::new()
-        .serve_file("web/static/404.html")
-        .status(404)
+fn default(_: Request, res: &mut Response) {
+    res.serve_file("web/static/404.html").status(404);
 }
+// fn default(_: Request) -> Response {
+//     Response::new()
+//         .serve_file("web/static/404.html")
+//         .status(404)
+// }
