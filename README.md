@@ -1,5 +1,5 @@
 TODO
-- [ ] Request object to pass to closure
+- [x] Request object to pass to closure
 - [ ] Async closures (possible?)
 - [ ] macros?
 - [ ] testst

@@ -44,8 +44,7 @@ impl Default for Endpoint {
 }
 
 fn default(_: Request) -> Response {
-    let mut res = Response::new();
-    res.status(404).serve_file("web/static/404.html");
-    // TODO: allow chaining like return Response::new().status(404).serve_file(...);
-    res
+    Response::new()
+        .serve_file("web/static/404.html")
+        .status(404)
 }

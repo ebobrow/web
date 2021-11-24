@@ -85,7 +85,7 @@ impl Response {
         }
     }
 
-    pub fn serve_file<P>(&mut self, path: P) -> &mut Self
+    pub fn serve_file<P>(mut self, path: P) -> Self
     where
         P: AsRef<Path>,
     {
@@ -99,12 +99,12 @@ impl Response {
         self
     }
 
-    pub fn status(&mut self, status: usize) -> &mut Self {
+    pub fn status(mut self, status: usize) -> Self {
         self.status_code = status;
         self
     }
 
-    pub fn content(&mut self, content: String) -> &mut Self {
+    pub fn content(mut self, content: String) -> Self {
         self.content = content;
         self
     }
@@ -125,6 +125,12 @@ impl Response {
             self.content.len(),
             self.content
         )
+    }
+}
+
+impl ToString for Response {
+    fn to_string(&self) -> String {
+        self.format_for_response()
     }
 }
 
