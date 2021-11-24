@@ -15,6 +15,15 @@ use crate::{
     response::Response,
 };
 
+macro_rules! add_endpoint {
+    ($name:ident, $method:path) => {
+        pub fn $name(&mut self, route: impl ToString, handler: fn(Request, &mut Response) -> ()) {
+            self.endpoints
+                .push(Endpoint::new(route.to_string(), $method, handler));
+        }
+    };
+}
+
 pub struct App {
     addr: SocketAddr,
     endpoints: Vec<Endpoint>,
@@ -30,19 +39,15 @@ impl App {
         })
     }
 
-    // TODO: macro generated methods
-    pub fn get(&mut self, route: impl ToString, handler: fn(Request, &mut Response) -> ()) {
-        self.endpoints
-            .push(Endpoint::new(route.to_string(), Method::GET, handler));
-    }
-    pub fn put(&mut self, route: impl ToString, handler: fn(Request, &mut Response) -> ()) {
-        self.endpoints
-            .push(Endpoint::new(route.to_string(), Method::PUT, handler));
-    }
-    pub fn post(&mut self, route: impl ToString, handler: fn(Request, &mut Response) -> ()) {
-        self.endpoints
-            .push(Endpoint::new(route.to_string(), Method::POST, handler));
-    }
+    add_endpoint!(get, Method::GET);
+    add_endpoint!(head, Method::HEAD);
+    add_endpoint!(post, Method::POST);
+    add_endpoint!(put, Method::PUT);
+    add_endpoint!(delete, Method::DELETE);
+    add_endpoint!(connect, Method::CONNECT);
+    add_endpoint!(options, Method::OPTIONS);
+    add_endpoint!(trace, Method::TRACE);
+    add_endpoint!(patch, Method::PATCH);
 
     #[tokio::main]
     pub async fn listen(self) {
