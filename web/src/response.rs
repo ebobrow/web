@@ -90,7 +90,10 @@ impl Response {
         P: AsRef<Path>,
     {
         self.content = match fs::read_to_string(path) {
-            Ok(content) => content,
+            Ok(content) => {
+                self.status_code = 200;
+                content
+            }
             Err(_) => {
                 self.status_code = 404;
                 fs::read_to_string("web/static/404.html").unwrap()
@@ -131,6 +134,14 @@ impl Response {
 impl ToString for Response {
     fn to_string(&self) -> String {
         self.format_for_response()
+    }
+}
+
+impl Default for Response {
+    fn default() -> Self {
+        let mut res = Response::new();
+        res.serve_file("web/static/404.html").status(404);
+        res
     }
 }
 

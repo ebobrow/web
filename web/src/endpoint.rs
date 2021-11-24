@@ -1,8 +1,8 @@
 use crate::{request::Request, response::Response, route::Route};
 
-type Cb = Box<dyn Fn(Request, &mut Response) -> () + Send>;
+type Cb = Box<dyn Fn(&Request, &mut Response) -> () + Send>;
 
-fn make_cb(f: fn(Request, &mut Response) -> ()) -> Cb {
+fn make_cb(f: fn(&Request, &mut Response) -> ()) -> Cb {
     Box::new(move |req, res| f(req, res))
 }
 
@@ -47,7 +47,7 @@ pub struct Endpoint {
 }
 
 impl Endpoint {
-    pub fn new(route: Route, method: Method, cb: fn(Request, &mut Response) -> ()) -> Self {
+    pub fn new(route: Route, method: Method, cb: fn(&Request, &mut Response) -> ()) -> Self {
         Endpoint {
             route,
             method,
@@ -57,19 +57,4 @@ impl Endpoint {
     pub fn matches(&self, request: &Request) -> bool {
         self.method == request.method && self.route == request.route
     }
-}
-
-impl Default for Endpoint {
-    fn default() -> Self {
-        Endpoint {
-            // route: String::from("*"),
-            route: Route::from("*"),
-            method: Method::GET,
-            cb: make_cb(default),
-        }
-    }
-}
-
-fn default(_: Request, res: &mut Response) {
-    res.serve_file("web/static/404.html").status(404);
 }

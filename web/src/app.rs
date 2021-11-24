@@ -18,7 +18,7 @@ use crate::{
 
 macro_rules! add_endpoint {
     ($name:ident, $method:path) => {
-        pub fn $name(&mut self, route: impl ToString, handler: fn(Request, &mut Response) -> ()) {
+        pub fn $name(&mut self, route: impl ToString, handler: fn(&Request, &mut Response) -> ()) {
             self.endpoints
                 .push(Endpoint::new(Route::from(route), $method, handler));
         }
@@ -70,14 +70,12 @@ impl App {
         let request = Request::new(&buffer);
 
         let response = {
-            let mut response = Response::new();
+            let mut response = Response::default();
             let routes = endpoints.lock().unwrap();
-            // TODO: middleware (run every match and have default repsonse with 404 whatever stuff)
-            (routes
+            routes
                 .iter()
-                .find(|r| r.matches(&request))
-                .unwrap_or(&Default::default())
-                .cb)(request, &mut response);
+                .filter(|r| r.matches(&request))
+                .for_each(|r| (r.cb)(&request, &mut response));
             response
         };
         stream
