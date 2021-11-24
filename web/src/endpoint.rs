@@ -1,4 +1,4 @@
-use crate::{request::Request, response::Response};
+use crate::{request::Request, response::Response, route::Route};
 
 type Cb = Box<dyn Fn(Request, &mut Response) -> () + Send>;
 
@@ -41,13 +41,13 @@ pub enum Method {
 }
 
 pub struct Endpoint {
-    route: String,
+    route: Route,
     method: Method,
     pub cb: Cb,
 }
 
 impl Endpoint {
-    pub fn new(route: String, method: Method, cb: fn(Request, &mut Response) -> ()) -> Self {
+    pub fn new(route: Route, method: Method, cb: fn(Request, &mut Response) -> ()) -> Self {
         Endpoint {
             route,
             method,
@@ -62,7 +62,8 @@ impl Endpoint {
 impl Default for Endpoint {
     fn default() -> Self {
         Endpoint {
-            route: String::from("*"),
+            // route: String::from("*"),
+            route: Route::from("*"),
             method: Method::GET,
             cb: make_cb(default),
         }
@@ -72,8 +73,3 @@ impl Default for Endpoint {
 fn default(_: Request, res: &mut Response) {
     res.serve_file("web/static/404.html").status(404);
 }
-// fn default(_: Request) -> Response {
-//     Response::new()
-//         .serve_file("web/static/404.html")
-//         .status(404)
-// }

@@ -3,4 +3,4 @@ TODO
 - [ ] Async closures (possible?)
 - [ ] macros?
 - [ ] testst
-- [ ] * in routes, etc.
+- [x] * in routes, etc.

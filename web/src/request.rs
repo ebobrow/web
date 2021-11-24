@@ -1,8 +1,8 @@
-use crate::endpoint::Method;
+use crate::{endpoint::Method, route::Route};
 
 pub struct Request {
     pub method: Method,
-    pub route: String,
+    pub route: Route,
     // TODO: These are not all
 }
 
@@ -13,14 +13,20 @@ impl Request {
         let mut parts = req.split(' ');
         let method = match parts.next() {
             Some("GET") => Method::GET,
-            Some("PUT") => Method::PUT,
+            Some("HEAD") => Method::HEAD,
             Some("POST") => Method::POST,
+            Some("PUT") => Method::PUT,
+            Some("DELETE") => Method::DELETE,
+            Some("CONNECT") => Method::CONNECT,
+            Some("OPTIONS") => Method::OPTIONS,
+            Some("TRACE") => Method::TRACE,
+            Some("PATCH") => Method::PATCH,
             _ => panic!(),
         };
 
         Request {
             method,
-            route: parts.next().unwrap().to_string(),
+            route: Route::from(parts.next().unwrap()),
         }
     }
 }
