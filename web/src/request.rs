@@ -13,12 +13,9 @@ impl Request {
         let mut parts = req.split(' ');
         let method = match parts.next() {
             Some("GET") => Method::GET,
-            Some("HEAD") => Method::HEAD,
             Some("POST") => Method::POST,
             Some("PUT") => Method::PUT,
             Some("DELETE") => Method::DELETE,
-            Some("CONNECT") => Method::CONNECT,
-            Some("OPTIONS") => Method::OPTIONS,
             Some("TRACE") => Method::TRACE,
             Some("PATCH") => Method::PATCH,
             _ => panic!(),

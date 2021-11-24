@@ -1,4 +1,4 @@
-use crate::{request::Request, response::Response, route::Route};
+use crate::{route::Route, Request, Response};
 
 type Cb = Box<dyn Fn(&Request, &mut Response) -> () + Send>;
 
@@ -12,10 +12,6 @@ pub enum Method {
     /// should only retrieve data.
     GET,
 
-    /// The HEAD method asks for a response identical to a GET request, but without the response
-    /// body.
-    HEAD,
-
     /// The POST method submits an entity to the specified resource, often causing a change in
     /// state or side effects on the server.
     POST,
@@ -26,12 +22,6 @@ pub enum Method {
 
     /// The DELETE method deletes the specified resource.
     DELETE,
-
-    /// The CONNECT method establishes a tunnel to the server identified by the target resource.
-    CONNECT,
-
-    /// The OPTIONS method describes the communication options for the target resource.
-    OPTIONS,
 
     /// The TRACE method performs a message loop-back test along the path to the target resource.
     TRACE,

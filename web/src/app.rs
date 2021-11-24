@@ -11,9 +11,8 @@ use tokio::{
 
 use crate::{
     endpoint::{Endpoint, Method},
-    request::Request,
-    response::Response,
     route::Route,
+    Request, Response,
 };
 
 macro_rules! add_endpoint {
@@ -41,12 +40,9 @@ impl App {
     }
 
     add_endpoint!(get, Method::GET);
-    add_endpoint!(head, Method::HEAD);
     add_endpoint!(post, Method::POST);
     add_endpoint!(put, Method::PUT);
     add_endpoint!(delete, Method::DELETE);
-    add_endpoint!(connect, Method::CONNECT);
-    add_endpoint!(options, Method::OPTIONS);
     add_endpoint!(trace, Method::TRACE);
     add_endpoint!(patch, Method::PATCH);
 
