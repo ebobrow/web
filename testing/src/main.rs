@@ -1,6 +1,6 @@
 use std::io;
 
-use web::{request::Request, response::Response, App};
+use web::{App, Request, Response};
 
 fn main() -> io::Result<()> {
     let mut app = App::new("127.0.0.1:3000")?;

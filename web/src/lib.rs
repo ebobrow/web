@@ -4,7 +4,9 @@ pub mod request;
 pub mod response;
 mod route;
 
-pub use crate::app::App;
+pub use app::App;
+pub use request::Request;
+pub use response::Response;
 
 #[cfg(test)]
 mod tests {
