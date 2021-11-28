@@ -27,6 +27,7 @@ macro_rules! add_endpoint {
 pub struct App {
     addr: SocketAddr,
     endpoints: Vec<Endpoint>,
+    logging: bool,
 }
 
 impl App {
@@ -36,6 +37,7 @@ impl App {
         Ok(Self {
             addr,
             endpoints: Vec::new(),
+            logging: false,
         })
     }
 
@@ -46,28 +48,40 @@ impl App {
     add_endpoint!(trace, Method::TRACE);
     add_endpoint!(patch, Method::PATCH);
 
+    pub fn log(&mut self) {
+        self.logging = true;
+    }
+
     #[tokio::main]
     pub async fn listen(self) -> io::Result<()> {
         let listener = TcpListener::bind(self.addr).await?;
 
-        let endpoints = Arc::new(Mutex::new(self.endpoints));
+        // let endpoints = Arc::new(Mutex::new(self.endpoints));
+        let slf = Arc::new(Mutex::new(self));
         loop {
             let (socket, _) = listener.accept().await?;
-            let endpoints = endpoints.clone();
+            // let endpoints = endpoints.clone();
+            let slf = slf.clone();
             tokio::spawn(async move {
-                App::handle_connection(endpoints, socket).await;
+                App::handle_connection(slf, socket).await;
             });
         }
     }
 
-    async fn handle_connection(endpoints: Arc<Mutex<Vec<Endpoint>>>, mut stream: TcpStream) {
+    async fn handle_connection(slf: Arc<Mutex<Self>>, mut stream: TcpStream) {
         let mut buffer = [0; 1024];
         stream.read(&mut buffer).await.unwrap();
         let request = Request::new(&buffer);
+        {
+            let slf = slf.lock().unwrap();
+            if slf.logging {
+                println!("{:?}", request);
+            }
+        }
 
         let response = {
             let mut response = Response::default();
-            let routes = endpoints.lock().unwrap();
+            let routes = &slf.lock().unwrap().endpoints;
             routes.iter().filter(|r| r.matches(&request)).for_each(|r| {
                 response.status(200);
                 let mut req = request.clone(); // TODO: without cloning

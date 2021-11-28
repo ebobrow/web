@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 use crate::{endpoint::Method, route::Route};
 
@@ -34,5 +34,11 @@ impl Request {
 
     pub fn populate_params(&mut self, route: &Route) {
         route.params(self);
+    }
+}
+
+impl Debug for Request {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{:?} to {:?}", self.method, self.route))
     }
 }

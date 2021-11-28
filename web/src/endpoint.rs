@@ -6,7 +6,7 @@ fn make_cb(f: fn(&Request, &mut Response) -> ()) -> Cb {
     Box::new(move |req, res| f(req, res))
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum Method {
     /// The GET method requests a representation of the specified resource. Requests using GET
     /// should only retrieve data.

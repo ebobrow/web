@@ -4,4 +4,4 @@ TODO
 - [ ] macros?
 - [ ] testst
 - [x] * in routes, etc.
-- [ ] logging
+- [x] logging

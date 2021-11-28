@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 use regex::Regex;
 
 use crate::Request;
 
-#[derive(Debug, Eq, Clone)]
+#[derive(Eq, Clone)]
 pub struct Route {
     segments: Vec<String>,
 }
@@ -46,6 +46,12 @@ impl PartialEq for Route {
                     Regex::new(&a).unwrap().is_match(b)
                 }
             })
+    }
+}
+
+impl Debug for Route {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("/{}", &self.segments.join("/")))
     }
 }
 
