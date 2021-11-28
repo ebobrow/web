@@ -47,12 +47,12 @@ impl App {
     add_endpoint!(patch, Method::PATCH);
 
     #[tokio::main]
-    pub async fn listen(self) {
-        let listener = TcpListener::bind(self.addr).await.unwrap();
+    pub async fn listen(self) -> io::Result<()> {
+        let listener = TcpListener::bind(self.addr).await?;
 
         let endpoints = Arc::new(Mutex::new(self.endpoints));
         loop {
-            let (socket, _) = listener.accept().await.unwrap();
+            let (socket, _) = listener.accept().await?;
             let endpoints = endpoints.clone();
             tokio::spawn(async move {
                 App::handle_connection(endpoints, socket).await;

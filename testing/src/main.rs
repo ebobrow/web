@@ -8,8 +8,7 @@ fn main() -> io::Result<()> {
     app.get("/a", a);
     app.get("/a", a2);
     app.get("/user/:name", user);
-    app.listen();
-    Ok(())
+    app.listen()
 }
 
 fn home(_: &Request, res: &mut Response) {
