@@ -68,10 +68,12 @@ impl App {
         let response = {
             let mut response = Response::default();
             let routes = endpoints.lock().unwrap();
-            routes
-                .iter()
-                .filter(|r| r.matches(&request))
-                .for_each(|r| (r.cb)(&request, &mut response));
+            routes.iter().filter(|r| r.matches(&request)).for_each(|r| {
+                response.status(200);
+                let mut req = request.clone(); // TODO: without cloning
+                r.route.params(&mut req);
+                (r.cb)(&req, &mut response)
+            });
             response
         };
         stream

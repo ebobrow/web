@@ -6,7 +6,7 @@ fn make_cb(f: fn(&Request, &mut Response) -> ()) -> Cb {
     Box::new(move |req, res| f(req, res))
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Method {
     /// The GET method requests a representation of the specified resource. Requests using GET
     /// should only retrieve data.
@@ -31,7 +31,7 @@ pub enum Method {
 }
 
 pub struct Endpoint {
-    route: Route,
+    pub route: Route,
     method: Method,
     pub cb: Cb,
 }
@@ -44,6 +44,7 @@ impl Endpoint {
             cb: make_cb(cb),
         }
     }
+
     pub fn matches(&self, request: &Request) -> bool {
         self.method == request.method && self.route == request.route
     }

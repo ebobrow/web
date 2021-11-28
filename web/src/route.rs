@@ -1,9 +1,10 @@
 use regex::Regex;
 
-#[derive(Debug, Eq)]
+use crate::Request;
+
+#[derive(Debug, Eq, Clone)]
 pub struct Route {
     segments: Vec<String>,
-    // TODO: parameters sent to Request struct
 }
 
 impl Route {
@@ -17,28 +18,40 @@ impl Route {
                 .collect(),
         }
     }
+
+    pub fn params(&self, req: &mut Request) {
+        self.segments
+            .iter()
+            .zip(req.route.segments.clone()) // TODO: without cloning
+            .filter(|(s, _)| s.starts_with(':'))
+            .for_each(|(s, r)| {
+                // TODO: without cloning
+                req.params.insert(s[1..].to_owned(), r.clone());
+            });
+    }
 }
 
 impl PartialEq for Route {
     fn eq(&self, other: &Self) -> bool {
         self.segments.len() == other.segments.len()
-            && !self
-                .segments
-                .iter()
-                .zip(&other.segments)
-                .find(|(a, b)| {
-                    if a.chars().all(char::is_alphanumeric) {
-                        a != b
-                    } else {
-                        !Regex::new(&a).unwrap().is_match(b)
-                    }
-                })
-                .is_some()
+            && self.segments.iter().zip(&other.segments).all(|(a, b)| {
+                if a.chars().all(char::is_alphanumeric) {
+                    a == b
+                } else if a.starts_with(':') {
+                    true // match on all parameters
+                } else {
+                    Regex::new(&a).unwrap().is_match(b)
+                }
+            })
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
+    use crate::endpoint::Method;
+
     use super::*;
 
     #[test]
@@ -60,5 +73,21 @@ mod tests {
 
         assert_eq!(wild, hi);
         assert_ne!(wild, i);
+    }
+
+    #[test]
+    fn params() {
+        let endpoint = Route::from("/:hi");
+        let mut request = Request {
+            method: Method::GET,
+            route: Route::from("/1"),
+            params: HashMap::new(),
+        };
+        endpoint.params(&mut request);
+
+        let mut expected = HashMap::new();
+        expected.insert(String::from("hi"), String::from("1"));
+
+        assert_eq!(expected, request.params);
     }
 }

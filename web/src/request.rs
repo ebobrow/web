@@ -1,8 +1,12 @@
+use std::collections::HashMap;
+
 use crate::{endpoint::Method, route::Route};
 
+#[derive(Clone)]
 pub struct Request {
     pub method: Method,
     pub route: Route,
+    pub params: HashMap<String, String>,
     // TODO: These are not all
 }
 
@@ -24,6 +28,7 @@ impl Request {
         Request {
             method,
             route: Route::from(parts.next().unwrap()),
+            params: HashMap::new(),
         }
     }
 }

@@ -7,6 +7,7 @@ fn main() -> io::Result<()> {
     app.get("/", home);
     app.get("/a", a);
     app.get("/a", a2);
+    app.get("/user/:name", user);
     app.listen();
     Ok(())
 }
@@ -25,4 +26,10 @@ fn a(_: &Request, res: &mut Response) {
 fn a2(_: &Request, res: &mut Response) {
     println!("second GET to /a");
     res.content("hi".to_string());
+}
+
+fn user(req: &Request, res: &mut Response) {
+    println!("GET to /user/:name");
+    let name = req.params.get("name").unwrap();
+    res.content(format!("Hello, {}", name));
 }
