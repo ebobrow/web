@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use regex::Regex;
 
 use crate::Request;
@@ -20,14 +22,15 @@ impl Route {
     }
 
     pub fn params(&self, req: &mut Request) {
+        let mut params = HashMap::new();
         self.segments
             .iter()
-            .zip(req.route.segments.clone()) // TODO: without cloning
+            .zip(&req.route.segments)
             .filter(|(s, _)| s.starts_with(':'))
             .for_each(|(s, r)| {
-                // TODO: without cloning
-                req.params.insert(s[1..].to_owned(), r.clone());
+                params.insert(s[1..].to_owned(), r.clone());
             });
+        req.params = params;
     }
 }
 
@@ -48,8 +51,6 @@ impl PartialEq for Route {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use crate::endpoint::Method;
 
     use super::*;

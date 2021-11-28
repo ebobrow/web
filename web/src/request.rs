@@ -31,4 +31,8 @@ impl Request {
             params: HashMap::new(),
         }
     }
+
+    pub fn populate_params(&mut self, route: &Route) {
+        route.params(self);
+    }
 }

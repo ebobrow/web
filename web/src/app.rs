@@ -71,7 +71,7 @@ impl App {
             routes.iter().filter(|r| r.matches(&request)).for_each(|r| {
                 response.status(200);
                 let mut req = request.clone(); // TODO: without cloning
-                r.route.params(&mut req);
+                req.populate_params(&r.route);
                 (r.cb)(&req, &mut response)
             });
             response
