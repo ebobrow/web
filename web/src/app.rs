@@ -11,12 +11,31 @@ use tokio::{
     net::{TcpListener, TcpStream},
 };
 
-use crate::{
-    endpoint::{Endpoint, Method},
-    route::Route,
-    Request, Response,
-};
+use crate::{route::Route, Request, Response};
 
+#[derive(PartialEq, Clone, Debug)]
+pub enum Method {
+    /// The GET method requests a representation of the specified resource. Requests using GET
+    /// should only retrieve data.
+    GET,
+
+    /// The POST method submits an entity to the specified resource, often causing a change in
+    /// state or side effects on the server.
+    POST,
+
+    /// The PUT method replaces all current representations of the target resource with the request
+    /// payload.
+    PUT,
+
+    /// The DELETE method deletes the specified resource.
+    DELETE,
+
+    /// The TRACE method performs a message loop-back test along the path to the target resource.
+    TRACE,
+
+    /// The PATCH method applies partial modifications to a resource.
+    PATCH,
+}
 pub struct App {
     addr: SocketAddr,
     cfg: Cb,
@@ -50,7 +69,7 @@ impl Runtime {
         let mut buffer = [0; 1024];
         self.stream.read(&mut buffer).await.unwrap();
         let mut request = Request::new(&buffer);
-        let endpoint = Endpoint::new(Route::from(route), method, handler); // TODO: is endpoint obsolete?
+        let route = Route::from(route);
 
         if self.logging {
             println!("{:?}", request);
@@ -58,9 +77,9 @@ impl Runtime {
 
         let response = {
             let mut response = Response::default();
-            if endpoint.matches(&request) {
+            if route == request.route && method == request.method {
                 response.status(200);
-                request.populate_params(&endpoint.route);
+                request.populate_params(&route); // TODO: I don't like this
                 (handler)(&request, &mut response)
             }
             response

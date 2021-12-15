@@ -57,7 +57,7 @@ impl Debug for Route {
 
 #[cfg(test)]
 mod tests {
-    use crate::endpoint::Method;
+    use crate::Method;
 
     use super::*;
 
