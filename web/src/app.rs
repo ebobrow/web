@@ -1,6 +1,8 @@
 use std::{
+    future::Future,
     io,
     net::{SocketAddr, ToSocketAddrs},
+    pin::Pin,
     sync::{Arc, Mutex},
 };
 
@@ -15,85 +17,130 @@ use crate::{
     Request, Response,
 };
 
-macro_rules! add_endpoint {
-    ($name:ident, $method:path) => {
-        pub fn $name(&mut self, route: impl ToString, handler: fn(&Request, &mut Response) -> ()) {
-            self.endpoints
-                .push(Endpoint::new(Route::from(route), $method, handler));
-        }
-    };
-}
-
 pub struct App {
     addr: SocketAddr,
-    endpoints: Vec<Endpoint>,
+    cfg: Cb,
+}
+
+// For lack of a better name
+pub struct Runtime {
+    stream: TcpStream,
     logging: bool,
 }
 
+impl Runtime {
+    async fn run(stream: TcpStream, cfg: Arc<Mutex<Cb>>) {
+        let rt = Runtime {
+            stream,
+            logging: false,
+        };
+        let fut = {
+            let cfg = cfg.lock().unwrap();
+            cfg(rt)
+        };
+        fut.await;
+    }
+
+    async fn endpoint(
+        &mut self,
+        route: impl ToString,
+        handler: fn(&Request, &mut Response) -> (),
+        method: Method,
+    ) {
+        let mut buffer = [0; 1024];
+        self.stream.read(&mut buffer).await.unwrap();
+        let mut request = Request::new(&buffer);
+        let endpoint = Endpoint::new(Route::from(route), method, handler); // TODO: is endpoint obsolete?
+
+        if self.logging {
+            println!("{:?}", request);
+        }
+
+        let response = {
+            let mut response = Response::default();
+            if endpoint.matches(&request) {
+                response.status(200);
+                request.populate_params(&endpoint.route);
+                (handler)(&request, &mut response)
+            }
+            response
+        };
+        self.stream
+            .write(response.format_for_response().as_bytes())
+            .await
+            .unwrap();
+        self.stream.flush().await.unwrap();
+    }
+    pub async fn get(&mut self, route: impl ToString, handler: fn(&Request, &mut Response) -> ()) {
+        self.endpoint(route, handler, Method::GET).await;
+    }
+    pub async fn post(&mut self, route: impl ToString, handler: fn(&Request, &mut Response) -> ()) {
+        self.endpoint(route, handler, Method::POST).await;
+    }
+    pub async fn put(&mut self, route: impl ToString, handler: fn(&Request, &mut Response) -> ()) {
+        self.endpoint(route, handler, Method::PUT).await;
+    }
+    pub async fn delete(
+        &mut self,
+        route: impl ToString,
+        handler: fn(&Request, &mut Response) -> (),
+    ) {
+        self.endpoint(route, handler, Method::DELETE).await;
+    }
+    pub async fn trace(
+        &mut self,
+        route: impl ToString,
+        handler: fn(&Request, &mut Response) -> (),
+    ) {
+        self.endpoint(route, handler, Method::TRACE).await;
+    }
+    pub async fn patch(
+        &mut self,
+        route: impl ToString,
+        handler: fn(&Request, &mut Response) -> (),
+    ) {
+        self.endpoint(route, handler, Method::PATCH).await;
+    }
+
+    // TODO: Pass custom function or something?
+    pub fn log(&mut self) {
+        self.logging = true;
+    }
+}
+
+type Cb = Box<dyn Fn(Runtime) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> + Send>;
+
+fn make_cb<T>(f: fn(Runtime) -> T) -> Cb
+where
+    T: Future<Output = ()> + Send + 'static,
+{
+    Box::new(move |rt| Box::pin(f(rt)))
+}
+
 impl App {
-    pub fn new<A: ToSocketAddrs>(addr: A) -> io::Result<Self> {
+    pub fn new<A: ToSocketAddrs, T>(addr: A, cfg: fn(Runtime) -> T) -> io::Result<Self>
+    where
+        T: Future<Output = ()> + Send + 'static,
+    {
         let addr = addr.to_socket_addrs()?.find(|_| true).unwrap();
 
         Ok(Self {
             addr,
-            endpoints: Vec::new(),
-            logging: false,
+            cfg: make_cb(cfg),
         })
-    }
-
-    add_endpoint!(get, Method::GET);
-    add_endpoint!(post, Method::POST);
-    add_endpoint!(put, Method::PUT);
-    add_endpoint!(delete, Method::DELETE);
-    add_endpoint!(trace, Method::TRACE);
-    add_endpoint!(patch, Method::PATCH);
-
-    pub fn log(&mut self) {
-        self.logging = true;
     }
 
     #[tokio::main]
     pub async fn listen(self) -> io::Result<()> {
         let listener = TcpListener::bind(self.addr).await?;
 
-        // let endpoints = Arc::new(Mutex::new(self.endpoints));
-        let slf = Arc::new(Mutex::new(self));
+        let cfg = Arc::new(Mutex::new(self.cfg));
         loop {
             let (socket, _) = listener.accept().await?;
-            // let endpoints = endpoints.clone();
-            let slf = slf.clone();
+            let cfg = cfg.clone();
             tokio::spawn(async move {
-                App::handle_connection(slf, socket).await;
+                Runtime::run(socket, cfg).await;
             });
         }
-    }
-
-    async fn handle_connection(slf: Arc<Mutex<Self>>, mut stream: TcpStream) {
-        let mut buffer = [0; 1024];
-        stream.read(&mut buffer).await.unwrap();
-        let request = Request::new(&buffer);
-        {
-            let slf = slf.lock().unwrap();
-            if slf.logging {
-                println!("{:?}", request);
-            }
-        }
-
-        let response = {
-            let mut response = Response::default();
-            let routes = &slf.lock().unwrap().endpoints;
-            routes.iter().filter(|r| r.matches(&request)).for_each(|r| {
-                response.status(200);
-                let mut req = request.clone(); // TODO: without cloning
-                req.populate_params(&r.route);
-                (r.cb)(&req, &mut response)
-            });
-            response
-        };
-        stream
-            .write(response.format_for_response().as_bytes())
-            .await
-            .unwrap();
-        stream.flush().await.unwrap();
     }
 }
