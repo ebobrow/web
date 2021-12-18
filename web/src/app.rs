@@ -72,7 +72,7 @@ pub struct App {
 // For lack of a better name
 pub struct Runtime {
     stream: TcpStream,
-    logging: bool,
+    logging: Option<Box<dyn Fn(&Request) + Send>>,
     request: Request,
 }
 
@@ -82,7 +82,7 @@ impl Runtime {
         stream.read(&mut buffer).await.unwrap();
         let rt = Runtime {
             stream,
-            logging: false,
+            logging: None,
             request: Request::new(&buffer),
         };
         let fut = {
@@ -96,12 +96,13 @@ impl Runtime {
         let route = Route::from(route);
 
         if route == self.request.route && method == self.request.method {
-            if self.logging {
-                println!("{:?}", self.request);
+            if let Some(logger) = &self.logging {
+                logger(&self.request);
             }
 
-            self.request.populate_params(&route); // TODO: I don't like this
-            let response = (handler)(self.request.clone()).await;
+            let mut req = self.request.clone();
+            req.populate_params(&route); // TODO: I don't like this
+            let response = (handler)(req).await;
             self.stream
                 .write(response.format_for_response().as_bytes())
                 .await
@@ -117,7 +118,13 @@ impl Runtime {
     add_endpoint!(patch, Method::PATCH);
 
     pub fn log(&mut self) {
-        self.logging = true;
+        self.logging = Some(Box::new(|req| {
+            println!("{:?}", req);
+        }));
+    }
+
+    pub fn log_with(&mut self, logger: fn(&Request)) {
+        self.logging = Some(Box::new(logger));
     }
 }
 
