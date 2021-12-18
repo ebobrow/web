@@ -36,22 +36,43 @@ pub enum Method {
     /// The PATCH method applies partial modifications to a resource.
     PATCH,
 }
+
+type Cfg = Box<dyn Fn(Runtime) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> + Send>;
+fn make_cfg<T>(f: fn(Runtime) -> T) -> Cfg
+where
+    T: Future<Output = ()> + Send + 'static,
+{
+    Box::new(move |rt| Box::pin(f(rt)))
+}
+
+type Handler = Box<dyn Fn(Request) -> Pin<Box<dyn Future<Output = Response> + Send>> + Send + Sync>;
+fn make_handler<T>(f: fn(Request) -> T) -> Handler
+where
+    T: Future<Output = Response> + Send + 'static,
+{
+    Box::new(move |req| Box::pin(f(req)))
+}
+
 pub struct App {
     addr: SocketAddr,
-    cfg: Cb,
+    cfg: Cfg,
 }
 
 // For lack of a better name
 pub struct Runtime {
     stream: TcpStream,
     logging: bool,
+    request: Request,
 }
 
 impl Runtime {
-    async fn run(stream: TcpStream, cfg: Arc<Mutex<Cb>>) {
+    async fn run(mut stream: TcpStream, cfg: Arc<Mutex<Cfg>>) {
+        let mut buffer = [0; 1024];
+        stream.read(&mut buffer).await.unwrap();
         let rt = Runtime {
             stream,
             logging: false,
+            request: Request::new(&buffer),
         };
         let fut = {
             let cfg = cfg.lock().unwrap();
@@ -60,80 +81,70 @@ impl Runtime {
         fut.await;
     }
 
-    async fn endpoint(
-        &mut self,
-        route: impl ToString,
-        handler: fn(&Request, &mut Response) -> (),
-        method: Method,
-    ) {
-        let mut buffer = [0; 1024];
-        self.stream.read(&mut buffer).await.unwrap();
-        let mut request = Request::new(&buffer);
+    async fn endpoint(&mut self, route: impl ToString, handler: Handler, method: Method) {
         let route = Route::from(route);
 
-        if self.logging {
-            println!("{:?}", request);
-        }
-
-        let response = {
-            let mut response = Response::default();
-            if route == request.route && method == request.method {
-                response.status(200);
-                request.populate_params(&route); // TODO: I don't like this
-                (handler)(&request, &mut response)
+        if route == self.request.route && method == self.request.method {
+            if self.logging {
+                println!("{:?}", self.request);
             }
-            response
-        };
-        self.stream
-            .write(response.format_for_response().as_bytes())
-            .await
-            .unwrap();
-        self.stream.flush().await.unwrap();
+
+            self.request.populate_params(&route); // TODO: I don't like this
+            let response = (handler)(self.request.clone()).await;
+            self.stream
+                .write(response.format_for_response().as_bytes())
+                .await
+                .unwrap();
+            self.stream.flush().await.unwrap();
+        }
     }
-    pub async fn get(&mut self, route: impl ToString, handler: fn(&Request, &mut Response) -> ()) {
-        self.endpoint(route, handler, Method::GET).await;
+    pub async fn get<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
+    where
+        T: Future<Output = Response> + Send + 'static,
+    {
+        self.endpoint(route, make_handler(handler), Method::GET)
+            .await;
     }
-    pub async fn post(&mut self, route: impl ToString, handler: fn(&Request, &mut Response) -> ()) {
-        self.endpoint(route, handler, Method::POST).await;
+    pub async fn post<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
+    where
+        T: Future<Output = Response> + Send + 'static,
+    {
+        self.endpoint(route, make_handler(handler), Method::POST)
+            .await;
     }
-    pub async fn put(&mut self, route: impl ToString, handler: fn(&Request, &mut Response) -> ()) {
-        self.endpoint(route, handler, Method::PUT).await;
+    pub async fn put<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
+    where
+        T: Future<Output = Response> + Send + 'static,
+    {
+        self.endpoint(route, make_handler(handler), Method::PUT)
+            .await;
     }
-    pub async fn delete(
-        &mut self,
-        route: impl ToString,
-        handler: fn(&Request, &mut Response) -> (),
-    ) {
-        self.endpoint(route, handler, Method::DELETE).await;
+    pub async fn delete<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
+    where
+        T: Future<Output = Response> + Send + 'static,
+    {
+        self.endpoint(route, make_handler(handler), Method::DELETE)
+            .await;
     }
-    pub async fn trace(
-        &mut self,
-        route: impl ToString,
-        handler: fn(&Request, &mut Response) -> (),
-    ) {
-        self.endpoint(route, handler, Method::TRACE).await;
+    pub async fn trace<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
+    where
+        T: Future<Output = Response> + Send + 'static,
+    {
+        self.endpoint(route, make_handler(handler), Method::TRACE)
+            .await;
     }
-    pub async fn patch(
-        &mut self,
-        route: impl ToString,
-        handler: fn(&Request, &mut Response) -> (),
-    ) {
-        self.endpoint(route, handler, Method::PATCH).await;
+    pub async fn patch<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
+    where
+        T: Future<Output = Response> + Send + 'static,
+    {
+        self.endpoint(route, make_handler(handler), Method::PATCH)
+            .await;
     }
 
     // TODO: Pass custom function or something?
     pub fn log(&mut self) {
         self.logging = true;
     }
-}
-
-type Cb = Box<dyn Fn(Runtime) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> + Send>;
-
-fn make_cb<T>(f: fn(Runtime) -> T) -> Cb
-where
-    T: Future<Output = ()> + Send + 'static,
-{
-    Box::new(move |rt| Box::pin(f(rt)))
 }
 
 impl App {
@@ -145,7 +156,7 @@ impl App {
 
         Ok(Self {
             addr,
-            cfg: make_cb(cfg),
+            cfg: make_cfg(cfg),
         })
     }
 
