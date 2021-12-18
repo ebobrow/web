@@ -53,6 +53,17 @@ where
     Box::new(move |req| Box::pin(f(req)))
 }
 
+macro_rules! add_endpoint {
+    ($name:ident, $method:path) => {
+        pub async fn $name<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
+        where
+            T: Future<Output = Response> + Send + 'static,
+        {
+            self.endpoint(route, make_handler(handler), $method).await;
+        }
+    };
+}
+
 pub struct App {
     addr: SocketAddr,
     cfg: Cfg,
@@ -98,50 +109,13 @@ impl Runtime {
             self.stream.flush().await.unwrap();
         }
     }
-    pub async fn get<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
-    where
-        T: Future<Output = Response> + Send + 'static,
-    {
-        self.endpoint(route, make_handler(handler), Method::GET)
-            .await;
-    }
-    pub async fn post<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
-    where
-        T: Future<Output = Response> + Send + 'static,
-    {
-        self.endpoint(route, make_handler(handler), Method::POST)
-            .await;
-    }
-    pub async fn put<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
-    where
-        T: Future<Output = Response> + Send + 'static,
-    {
-        self.endpoint(route, make_handler(handler), Method::PUT)
-            .await;
-    }
-    pub async fn delete<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
-    where
-        T: Future<Output = Response> + Send + 'static,
-    {
-        self.endpoint(route, make_handler(handler), Method::DELETE)
-            .await;
-    }
-    pub async fn trace<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
-    where
-        T: Future<Output = Response> + Send + 'static,
-    {
-        self.endpoint(route, make_handler(handler), Method::TRACE)
-            .await;
-    }
-    pub async fn patch<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
-    where
-        T: Future<Output = Response> + Send + 'static,
-    {
-        self.endpoint(route, make_handler(handler), Method::PATCH)
-            .await;
-    }
+    add_endpoint!(get, Method::GET);
+    add_endpoint!(post, Method::POST);
+    add_endpoint!(put, Method::PUT);
+    add_endpoint!(delete, Method::DELETE);
+    add_endpoint!(trace, Method::TRACE);
+    add_endpoint!(patch, Method::PATCH);
 
-    // TODO: Pass custom function or something?
     pub fn log(&mut self) {
         self.logging = true;
     }

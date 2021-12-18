@@ -1,7 +1,7 @@
 TODO
 - [x] Request object to pass to closure
-- [ ] Async closures (possible?)
+- [x] Async closures (possible?)
 - [ ] macros?
-- [ ] testst
+- [ ] tests
 - [x] * in routes, etc.
 - [x] logging
