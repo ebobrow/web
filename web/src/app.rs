@@ -87,6 +87,7 @@ impl Runtime {
             request: Request::new(&buffer),
             response: Response::default(),
         };
+
         let fut = {
             let cfg = cfg.lock().unwrap();
             cfg(rt)
@@ -95,6 +96,10 @@ impl Runtime {
     }
 
     pub async fn end(&mut self) {
+        if let Some(logger) = &self.logging {
+            logger(&self.request);
+        }
+
         self.stream
             .write(self.response.format_for_response().as_bytes())
             .await
@@ -106,10 +111,6 @@ impl Runtime {
         let route = Route::from(route);
 
         if route == self.request.route && method == self.request.method {
-            if let Some(logger) = &self.logging {
-                logger(&self.request);
-            }
-
             let mut req = self.request.clone();
             req.populate_params(&route);
             self.response = (handler)(req).await; // TODO: Combine instead of overwriting?
