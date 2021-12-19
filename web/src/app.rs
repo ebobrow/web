@@ -74,6 +74,7 @@ pub struct Runtime {
     stream: TcpStream,
     logging: Option<Box<dyn Fn(&Request) + Send>>,
     request: Request,
+    response: Response,
 }
 
 impl Runtime {
@@ -84,12 +85,21 @@ impl Runtime {
             stream,
             logging: None,
             request: Request::new(&buffer),
+            response: Response::default(),
         };
         let fut = {
             let cfg = cfg.lock().unwrap();
             cfg(rt)
         };
         fut.await;
+    }
+
+    pub async fn end(&mut self) {
+        self.stream
+            .write(self.response.format_for_response().as_bytes())
+            .await
+            .unwrap();
+        self.stream.flush().await.unwrap();
     }
 
     async fn endpoint(&mut self, route: impl ToString, handler: Handler, method: Method) {
@@ -102,12 +112,7 @@ impl Runtime {
 
             let mut req = self.request.clone();
             req.populate_params(&route);
-            let response = (handler)(req).await;
-            self.stream
-                .write(response.format_for_response().as_bytes())
-                .await
-                .unwrap();
-            self.stream.flush().await.unwrap();
+            self.response = (handler)(req).await; // TODO: Combine instead of overwriting?
         }
     }
     add_endpoint!(get, Method::GET);
