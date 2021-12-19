@@ -101,7 +101,7 @@ impl Runtime {
             }
 
             let mut req = self.request.clone();
-            req.populate_params(&route); // TODO: I don't like this
+            req.populate_params(&route);
             let response = (handler)(req).await;
             self.stream
                 .write(response.format_for_response().as_bytes())

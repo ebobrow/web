@@ -21,16 +21,13 @@ impl Route {
         }
     }
 
-    pub fn params(&self, req: &mut Request) {
-        let mut params = HashMap::new();
+    pub fn params(&self, req: &Request) -> HashMap<String, String> {
         self.segments
             .iter()
             .zip(&req.route.segments)
             .filter(|(s, _)| s.starts_with(':'))
-            .for_each(|(s, r)| {
-                params.insert(s[1..].to_owned(), r.clone());
-            });
-        req.params = params;
+            .map(|(s, o)| (s.to_owned(), o.clone()))
+            .collect()
     }
 }
 
