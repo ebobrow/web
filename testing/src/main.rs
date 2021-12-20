@@ -17,28 +17,24 @@ fn main() -> io::Result<()> {
     app.listen()
 }
 
-async fn home(_: Request) -> Response {
-    let mut res = Response::new();
+async fn home(_: Request, mut res: Response) -> Response {
     res.serve_file("testing/hello.html");
     res
 }
 
-async fn a(_: Request) -> Response {
-    let mut res = Response::new();
+async fn a(_: Request, mut res: Response) -> Response {
     res.status(200)
         .content("you will never see this".to_string());
     res
 }
 
-async fn a2(_: Request) -> Response {
-    let mut res = Response::new();
+async fn a2(_: Request, mut res: Response) -> Response {
     res.content("hi".to_string());
     res
 }
 
-async fn user(req: Request) -> Response {
-    let mut res = Response::new();
+async fn user(req: Request, mut res: Response) -> Response {
     let name = req.params.get("name").unwrap();
-    res.content(format!("Hello, {}", name));
+    res.content(format!("Hello, {}", name)).status(200);
     res
 }

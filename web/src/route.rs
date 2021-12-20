@@ -26,7 +26,7 @@ impl Route {
             .iter()
             .zip(&req.route.segments)
             .filter(|(s, _)| s.starts_with(':'))
-            .map(|(s, o)| (s.to_owned(), o.clone()))
+            .map(|(s, o)| (s[1..].to_owned(), o.clone()))
             .collect()
     }
 }

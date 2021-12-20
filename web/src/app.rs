@@ -45,17 +45,18 @@ where
     Box::new(move |rt| Box::pin(f(rt)))
 }
 
-type Handler = Box<dyn Fn(Request) -> Pin<Box<dyn Future<Output = Response> + Send>> + Send + Sync>;
-fn make_handler<T>(f: fn(Request) -> T) -> Handler
+type Handler =
+    Box<dyn Fn(Request, Response) -> Pin<Box<dyn Future<Output = Response> + Send>> + Send + Sync>;
+fn make_handler<T>(f: fn(Request, Response) -> T) -> Handler
 where
     T: Future<Output = Response> + Send + 'static,
 {
-    Box::new(move |req| Box::pin(f(req)))
+    Box::new(move |req, res| Box::pin(f(req, res)))
 }
 
 macro_rules! add_endpoint {
     ($name:ident, $method:path) => {
-        pub async fn $name<T>(&mut self, route: impl ToString, handler: fn(Request) -> T)
+        pub async fn $name<T>(&mut self, route: impl ToString, handler: fn(Request, Response) -> T)
         where
             T: Future<Output = Response> + Send + 'static,
         {
@@ -113,7 +114,7 @@ impl Runtime {
         if route == self.request.route && method == self.request.method {
             let mut req = self.request.clone();
             req.populate_params(&route);
-            self.response = (handler)(req).await; // TODO: Combine instead of overwriting?
+            self.response = (handler)(req, self.response.clone()).await;
         }
     }
     add_endpoint!(get, Method::GET);

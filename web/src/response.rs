@@ -2,6 +2,7 @@ use std::{fs, path::Path};
 
 use phf::phf_map;
 
+#[derive(Clone)]
 pub struct Response {
     content: String,
     status_code: usize,
