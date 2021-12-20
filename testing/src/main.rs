@@ -1,6 +1,6 @@
 use std::io;
 
-use web::{App, Request, Response};
+use web::{App, Request, Response, StatusCode};
 
 fn main() -> io::Result<()> {
     let app = App::new("127.0.0.1:3000", |mut rt| async move {
@@ -23,7 +23,7 @@ async fn home(_: Request, mut res: Response) -> Response {
 }
 
 async fn a(_: Request, mut res: Response) -> Response {
-    res.status(200)
+    res.status(StatusCode::OK)
         .content("you will never see this".to_string());
     res
 }
