@@ -1,6 +1,6 @@
 use phf::phf_map;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Status {
     num: usize,
     msg: String,
@@ -59,7 +59,7 @@ pub enum StatusCode {
 
     MultipleChoice,
     MovedPermanently,
-    Fonud, // TODO: Found?
+    Found,
     SeeOther,
     NotModified,
     UseProxy,
@@ -133,7 +133,7 @@ impl ToString for StatusCode {
 
             StatusCode::MultipleChoice => String::from("Multiple Choice"),
             StatusCode::MovedPermanently => String::from("Moved Permanently"),
-            StatusCode::Fonud => String::from("Fonud"),
+            StatusCode::Found => String::from("Found"),
             StatusCode::SeeOther => String::from("See Other"),
             StatusCode::NotModified => String::from("Not Modified"),
             StatusCode::UseProxy => String::from("Use Proxy"),
@@ -211,7 +211,7 @@ static STATUS_CODES: phf::Map<&'static str, usize> = phf_map! {
 
     "Multiple Choice" => 300,
     "Moved Permanently" => 301,
-    "Fonud" => 302,
+    "Found" => 302,
     "See Other" => 303,
     "Not Modified" => 304,
     "Use Proxy" => 305,
@@ -261,3 +261,28 @@ static STATUS_CODES: phf::Map<&'static str, usize> = phf_map! {
     "Not Extended" => 510,
     "Network Authentication Required" => 511
 };
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn from_into() {
+        let expected = Status {
+            num: 200,
+            msg: String::from("OK"),
+        };
+
+        assert_eq!(expected, Status::from(200));
+        assert_eq!(expected, Status::from(StatusCode::OK));
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!(format!("{}", Status::from(404)), "404 Not Found");
+        assert_eq!(
+            format!("{}", Status::from(StatusCode::ImATeapot)),
+            "418 I'm a teapot"
+        );
+    }
+}

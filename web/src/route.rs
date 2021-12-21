@@ -87,7 +87,7 @@ mod tests {
             route: Route::from("/1"),
             params: HashMap::new(),
         };
-        endpoint.params(&mut request);
+        request.populate_params(&endpoint);
 
         let mut expected = HashMap::new();
         expected.insert(String::from("hi"), String::from("1"));
