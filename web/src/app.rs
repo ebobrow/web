@@ -96,7 +96,7 @@ impl Runtime {
         fut.await;
     }
 
-    pub async fn end(&mut self) {
+    pub async fn listen(&mut self) {
         if let Some(logger) = &self.logging {
             logger(&self.request);
         }
@@ -136,23 +136,21 @@ impl Runtime {
 }
 
 impl App {
-    pub fn new<A: ToSocketAddrs, T>(addr: A, cfg: fn(Runtime) -> T) -> io::Result<Self>
+    #[tokio::main]
+    pub async fn new<A: ToSocketAddrs, T>(addr: A, cfg: fn(Runtime) -> T) -> io::Result<()>
     where
         T: Future<Output = ()> + Send + 'static,
     {
         let addr = addr.to_socket_addrs()?.find(|_| true).unwrap();
 
-        Ok(Self {
+        let app = Self {
             addr,
             cfg: make_cfg(cfg),
-        })
-    }
+        };
 
-    #[tokio::main]
-    pub async fn listen(self) -> io::Result<()> {
-        let listener = TcpListener::bind(self.addr).await?;
+        let listener = TcpListener::bind(app.addr).await?;
 
-        let cfg = Arc::new(Mutex::new(self.cfg));
+        let cfg = Arc::new(Mutex::new(app.cfg));
         loop {
             let (socket, _) = listener.accept().await?;
             let cfg = cfg.clone();

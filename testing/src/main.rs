@@ -3,18 +3,17 @@ use std::io;
 use web::{App, Request, Response, StatusCode};
 
 fn main() -> io::Result<()> {
-    let app = App::new("127.0.0.1:3000", |mut rt| async move {
-        rt.log_with(|_| println!("special logger for home route"));
-        rt.get("/", home).await; // TODO: Don't want `.await`
+    App::new("127.0.0.1:3000", |mut app| async move {
+        app.log_with(|_| println!("special logger for home route"));
+        app.get("/", home).await; // TODO: Don't want `.await`
 
-        rt.log(); // Turn on default logger
-        rt.get("/a", a).await;
-        rt.get("/a", a2).await;
-        rt.get("/user/:name", user).await;
+        app.log(); // Turn on default logger
+        app.get("/a", a).await;
+        app.get("/a", a2).await;
+        app.get("/user/:name", user).await;
 
-        rt.end().await; // TODO: Don't want this
-    })?;
-    app.listen()
+        app.listen().await; // TODO: Don't want this
+    })
 }
 
 async fn home(_: Request, mut res: Response) -> Response {
