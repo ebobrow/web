@@ -31,7 +31,7 @@ impl Response {
             }
             Err(_) => {
                 self.status = Status::from(404);
-                fs::read_to_string("web/static/404.html").unwrap()
+                fs::read_to_string("static/404.html").unwrap()
             }
         };
         self
@@ -67,7 +67,7 @@ impl ToString for Response {
 impl Default for Response {
     fn default() -> Self {
         let mut res = Response::new();
-        res.serve_file("web/static/404.html").status(404);
+        res.serve_file("static/404.html").status(404);
         res
     }
 }

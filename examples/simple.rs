@@ -17,7 +17,7 @@ fn main() -> io::Result<()> {
 }
 
 async fn home(_: Request, mut res: Response) -> Response {
-    res.serve_file("testing/hello.html");
+    res.serve_file("examples/static/hello.html");
     res
 }
 
@@ -34,6 +34,7 @@ async fn a2(_: Request, mut res: Response) -> Response {
 
 async fn user(req: Request, mut res: Response) -> Response {
     let name = req.params.get("name").unwrap();
-    res.content(format!("Hello, {}", name)).status(200);
+    res.content(format!("Hello, {}", name))
+        .status(StatusCode::OK);
     res
 }
