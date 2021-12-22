@@ -16,6 +16,10 @@ impl Response {
         }
     }
 
+    pub async fn default_async() -> Self {
+        Default::default()
+    }
+
     pub fn serve_file<P>(&mut self, path: P) -> &mut Self
     where
         P: AsRef<Path>,

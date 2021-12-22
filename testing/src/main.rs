@@ -4,13 +4,13 @@ use web::{App, Request, Response, StatusCode};
 
 fn main() -> io::Result<()> {
     App::new("127.0.0.1:3000", |mut app| async move {
-        app.log_with(|_| println!("special logger for home route"));
-        app.get("/", home).await; // TODO: Don't want `.await`
+        app.log_with(|_| println!("special logger for home route")); // TODO: When did this break?
+        app.get("/", home);
 
         app.log(); // Turn on default logger
-        app.get("/a", a).await;
-        app.get("/a", a2).await;
-        app.get("/user/:name", user).await;
+        app.get("/a", a);
+        app.get("/a", a2);
+        app.get("/user/:name", user);
 
         app.listen().await; // TODO: Don't want this
     })

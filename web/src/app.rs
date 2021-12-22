@@ -56,11 +56,11 @@ where
 
 macro_rules! add_endpoint {
     ($name:ident, $method:path) => {
-        pub async fn $name<T>(&mut self, route: impl ToString, handler: fn(Request, Response) -> T)
+        pub fn $name<T>(&mut self, route: impl ToString, handler: fn(Request, Response) -> T)
         where
             T: Future<Output = Response> + Send + 'static,
         {
-            self.endpoint(route, make_handler(handler), $method).await;
+            self.endpoint(route, make_handler(handler), $method);
         }
     };
 }
@@ -75,7 +75,7 @@ pub struct Runtime {
     stream: TcpStream,
     logging: Option<Box<dyn Fn(&Request) + Send>>,
     request: Request,
-    response: Response,
+    response: Pin<Box<(dyn Future<Output = Response> + Send + 'static)>>,
 }
 
 impl Runtime {
@@ -86,7 +86,7 @@ impl Runtime {
             stream,
             logging: None,
             request: Request::new(&buffer),
-            response: Response::default(),
+            response: Box::pin(Response::default_async()),
         };
 
         let fut = {
@@ -101,20 +101,22 @@ impl Runtime {
             logger(&self.request);
         }
 
+        let res = std::mem::replace(&mut self.response, Box::pin(Response::default_async()));
         self.stream
-            .write(self.response.format_for_response().as_bytes())
+            .write(res.await.format_for_response().as_bytes())
             .await
             .unwrap();
         self.stream.flush().await.unwrap();
     }
 
-    async fn endpoint(&mut self, route: impl ToString, handler: Handler, method: Method) {
+    fn endpoint(&mut self, route: impl ToString, handler: Handler, method: Method) {
         let route = Route::from(route);
 
         if route == self.request.route && method == self.request.method {
             let mut req = self.request.clone();
             req.populate_params(&route);
-            self.response = (handler)(req, self.response.clone()).await;
+            let res = std::mem::replace(&mut self.response, Box::pin(Response::default_async()));
+            self.response = Box::pin((|| async move { (handler)(req, res.await).await })());
         }
     }
     add_endpoint!(get, Method::GET);
