@@ -76,7 +76,7 @@ pub struct Runtime {
     logging: Option<Box<dyn Fn(&Request) + Send>>,
     identified: bool,
     request: Request,
-    response: Pin<Box<(dyn Future<Output = Response> + Send + 'static)>>,
+    response: Pin<Box<dyn Future<Output = Response> + Send + 'static>>,
 }
 
 impl Runtime {

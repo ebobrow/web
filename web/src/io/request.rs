@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use crate::{route::Route, Method};
+use crate::{app::Method, route::Route};
 
 #[derive(Clone)]
 pub struct Request {

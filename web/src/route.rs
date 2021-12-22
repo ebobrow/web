@@ -54,7 +54,7 @@ impl Debug for Route {
 
 #[cfg(test)]
 mod tests {
-    use crate::Method;
+    use crate::app::Method;
 
     use super::*;
 

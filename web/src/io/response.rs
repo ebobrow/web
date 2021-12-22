@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use crate::status::Status;
+use crate::io::status::Status;
 
 #[derive(Clone)]
 pub struct Response {
