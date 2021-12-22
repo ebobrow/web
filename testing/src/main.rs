@@ -4,7 +4,7 @@ use web::{App, Request, Response, StatusCode};
 
 fn main() -> io::Result<()> {
     App::new("127.0.0.1:3000", |mut app| async move {
-        app.log_with(|_| println!("special logger for home route")); // TODO: When did this break?
+        app.log_with(|_| println!("special logger for home route"));
         app.get("/", home);
 
         app.log(); // Turn on default logger

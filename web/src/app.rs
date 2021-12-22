@@ -74,6 +74,7 @@ pub struct App {
 pub struct Runtime {
     stream: TcpStream,
     logging: Option<Box<dyn Fn(&Request) + Send>>,
+    identified: bool,
     request: Request,
     response: Pin<Box<(dyn Future<Output = Response> + Send + 'static)>>,
 }
@@ -85,6 +86,7 @@ impl Runtime {
         let rt = Runtime {
             stream,
             logging: None,
+            identified: false,
             request: Request::new(&buffer),
             response: Box::pin(Response::default_async()),
         };
@@ -97,8 +99,8 @@ impl Runtime {
     }
 
     pub async fn listen(&mut self) {
-        if let Some(logger) = &self.logging {
-            logger(&self.request);
+        if !self.identified {
+            self.log_route(); // TODO: Can we do something special knowing it's 404?
         }
 
         let res = std::mem::replace(&mut self.response, Box::pin(Response::default_async()));
@@ -109,10 +111,20 @@ impl Runtime {
         self.stream.flush().await.unwrap();
     }
 
+    // Bad naming again
+    fn log_route(&self) {
+        if let Some(logger) = &self.logging {
+            logger(&self.request);
+        }
+    }
+
     fn endpoint(&mut self, route: impl ToString, handler: Handler, method: Method) {
         let route = Route::from(route);
 
         if route == self.request.route && method == self.request.method {
+            self.identified = true;
+            self.log_route();
+
             let mut req = self.request.clone();
             req.populate_params(&route);
             let res = std::mem::replace(&mut self.response, Box::pin(Response::default_async()));
