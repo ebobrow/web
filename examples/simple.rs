@@ -18,7 +18,7 @@ fn main() -> io::Result<()> {
 
 async fn home(_: Request, mut res: Response) -> Response {
     res.serve_file("examples/static/hello.html");
-    res
+    res // TODO: can this be mutated in place?
 }
 
 async fn a(_: Request, mut res: Response) -> Response {

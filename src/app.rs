@@ -88,7 +88,7 @@ impl Runtime {
             logging: None,
             identified: false,
             request: Request::new(&buffer),
-            response: Box::pin(Response::default_async()),
+            response: Box::pin(async { Response::default() }),
         };
 
         let fut = {
@@ -103,7 +103,7 @@ impl Runtime {
             self.log_route(); // TODO: Can we do something special knowing it's 404?
         }
 
-        let res = std::mem::replace(&mut self.response, Box::pin(Response::default_async()));
+        let res = std::mem::replace(&mut self.response, Box::pin(async { Response::default() }));
         self.stream
             .write(res.await.format_for_response().as_bytes())
             .await
@@ -127,8 +127,9 @@ impl Runtime {
 
             let mut req = self.request.clone();
             req.populate_params(&route);
-            let res = std::mem::replace(&mut self.response, Box::pin(Response::default_async()));
-            self.response = Box::pin((|| async move { (handler)(req, res.await).await })());
+            let res =
+                std::mem::replace(&mut self.response, Box::pin(async { Response::default() }));
+            self.response = Box::pin(async move { (handler)(req, res.await).await });
         }
     }
     add_endpoint!(get, Method::GET);

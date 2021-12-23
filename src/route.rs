@@ -40,7 +40,7 @@ impl PartialEq for Route {
                 } else if a.starts_with(':') {
                     true // match on all parameters
                 } else {
-                    Regex::new(&a).unwrap().is_match(b)
+                    Regex::new(a).unwrap().is_match(b)
                 }
             })
     }

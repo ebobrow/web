@@ -25,7 +25,7 @@ impl From<StatusCode> for Status {
         Status {
             num: *STATUS_CODES
                 .entries()
-                .find(|(k, _)| k == &&&msg.to_string())
+                .find(|(k, _)| k == &&msg.to_string())
                 .unwrap()
                 .1,
             msg: msg.to_string(),

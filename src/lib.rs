@@ -1,3 +1,6 @@
+// TODO: Tests
+// TODO: Cookies
+
 pub mod app;
 pub mod io;
 mod route;

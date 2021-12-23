@@ -33,7 +33,7 @@ impl Request {
     }
 
     pub fn populate_params(&mut self, route: &Route) {
-        self.params = route.params(&self);
+        self.params = route.params(self);
     }
 }
 

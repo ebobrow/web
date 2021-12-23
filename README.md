@@ -1,4 +1,3 @@
-TODO
-- [ ] macros?
-- [ ] tests
-- [ ] cookies
+# Web
+
+A bad Rust framework
