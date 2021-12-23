@@ -6,7 +6,7 @@ use crate::Request;
 
 #[derive(Eq, Clone)]
 pub struct Route {
-    segments: Vec<String>,
+    pub(crate) segments: Vec<String>,
 }
 
 impl Route {

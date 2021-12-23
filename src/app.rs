@@ -87,7 +87,7 @@ impl Runtime {
             stream,
             logging: None,
             identified: false,
-            request: Request::new(&buffer),
+            request: Request::from(&buffer),
             response: Box::pin(async { Response::default() }),
         };
 

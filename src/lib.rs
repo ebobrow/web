@@ -1,4 +1,3 @@
-// TODO: Tests
 // TODO: Cookies
 
 pub mod app;
