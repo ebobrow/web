@@ -6,17 +6,19 @@ pub struct Status {
     msg: String,
 }
 
-impl From<usize> for Status {
-    fn from(num: usize) -> Self {
-        Status {
+impl TryFrom<usize> for Status {
+    type Error = &'static str;
+
+    fn try_from(num: usize) -> Result<Self, Self::Error> {
+        Ok(Status {
             num,
             msg: STATUS_CODES
                 .entries()
                 .find(|(_, v)| v == &&num)
-                .unwrap()
+                .ok_or("invalid status code")?
                 .0
                 .to_string(),
-        }
+        })
     }
 }
 
@@ -273,13 +275,16 @@ mod tests {
             msg: String::from("OK"),
         };
 
-        assert_eq!(expected, Status::from(200));
+        assert_eq!(expected, Status::try_from(200).unwrap());
         assert_eq!(expected, Status::from(StatusCode::OK));
     }
 
     #[test]
     fn display() {
-        assert_eq!(format!("{}", Status::from(404)), "404 Not Found");
+        assert_eq!(
+            format!("{}", Status::try_from(404).unwrap()),
+            "404 Not Found"
+        );
         assert_eq!(
             format!("{}", Status::from(StatusCode::ImATeapot)),
             "418 I'm a teapot"

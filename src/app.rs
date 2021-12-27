@@ -37,17 +37,19 @@ pub enum Method {
     PATCH,
 }
 
-impl From<&str> for Method {
-    fn from(s: &str) -> Self {
-        match s {
+impl TryFrom<&str> for Method {
+    type Error = &'static str;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        Ok(match s {
             "GET" => Method::GET,
             "POST" => Method::POST,
             "PUT" => Method::PUT,
             "DELETE" => Method::DELETE,
             "TRACE" => Method::TRACE,
             "PATCH" => Method::PATCH,
-            _ => panic!(),
-        }
+            _ => return Err("invalid method"),
+        })
     }
 }
 
@@ -101,7 +103,7 @@ impl Runtime {
             stream,
             logging: None,
             identified: false,
-            request: Request::from(&buffer),
+            request: Request::try_from(&buffer).unwrap(),
             response: Box::pin(async { Response::default() }),
         };
 

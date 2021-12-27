@@ -42,7 +42,7 @@ async fn user(req: Request, mut res: Response) -> Response {
 }
 
 async fn post(req: Request, mut res: Response) -> Response {
-    res.status(200)
+    res.status(StatusCode::OK)
         .content(format!("Your username is {}", req.body["username"]));
     res
 }

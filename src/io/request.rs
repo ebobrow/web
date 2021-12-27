@@ -19,19 +19,22 @@ impl Request {
     }
 }
 
-impl From<&[u8; 1024]> for Request {
-    fn from(buffer: &[u8; 1024]) -> Self {
-        Self::from(String::from_utf8(buffer.to_vec()).unwrap())
+impl TryFrom<&[u8; 1024]> for Request {
+    type Error = &'static str;
+
+    fn try_from(buffer: &[u8; 1024]) -> Result<Self, Self::Error> {
+        Self::try_from(String::from_utf8(buffer.to_vec()).unwrap())
     }
 }
 
-// TODO: TryFrom?
-impl From<String> for Request {
-    fn from(req: String) -> Self {
+impl TryFrom<String> for Request {
+    type Error = &'static str;
+
+    fn try_from(req: String) -> Result<Self, Self::Error> {
         let mut lines = req.lines();
-        let mut header = lines.next().unwrap().split(' ');
-        let method = header.next().unwrap();
-        let route = header.next().unwrap();
+        let mut header = lines.next().ok_or("empty request")?.split(' ');
+        let method = header.next().ok_or("invalid start-line")?;
+        let route = header.next().ok_or("invalid start-line")?;
 
         let mut headers = HashMap::new();
 
@@ -40,7 +43,7 @@ impl From<String> for Request {
                 break; // End of headers
             }
 
-            let (key, value) = line.split_once(':').unwrap();
+            let (key, value) = line.split_once(':').ok_or("invalid header")?;
             let mut value = value.to_lowercase();
             value.retain(|c| !c.is_whitespace());
             headers.insert(key.to_lowercase(), value);
@@ -48,19 +51,22 @@ impl From<String> for Request {
 
         let body = if let Some("application/json") = headers.get("content-type").map(|s| &s[..]) {
             let json: String = lines.collect();
-            let end = json.find('}').unwrap();
-            serde_json::from_str(&json[..end + 1]).unwrap()
+            let end = json.find('}').ok_or("invalid body")?;
+            match serde_json::from_str(&json[..end + 1]) {
+                Ok(body) => body,
+                Err(_) => return Err("invalid body"),
+            }
         } else {
             Value::Null
         };
 
-        Request {
-            method: method.into(),
+        Ok(Request {
+            method: method.try_into()?,
             route: route.into(),
             params: HashMap::new(),
             headers,
             body,
-        }
+        })
     }
 }
 
@@ -76,11 +82,11 @@ mod tests {
 
     #[test]
     fn create() {
-        let request = Request::from(String::from("GET /"));
+        let request = Request::try_from(String::from("GET /")).unwrap();
         assert_eq!(request.method, Method::GET);
         assert_eq!(request.route, Route { segments: vec![] });
 
-        let request = Request::from(String::from("DELETE /a/b/c/"));
+        let request = Request::try_from(String::from("DELETE /a/b/c/")).unwrap();
         assert_eq!(request.method, Method::DELETE);
         assert_eq!(
             request.route,
@@ -89,7 +95,7 @@ mod tests {
             }
         );
 
-        let request = Request::from(String::from(
+        let request = Request::try_from(String::from(
             r#"POST /auth/register HTTP/1.1
 content-type: application/json
 accept: */*
@@ -97,7 +103,8 @@ host: localhost:3000
 
 {"username": "name", "age": 123}
 "#,
-        ));
+        ))
+        .unwrap();
         assert_eq!(request.method, Method::POST);
         assert_eq!(
             request.route,
@@ -114,11 +121,53 @@ host: localhost:3000
     }
 
     #[test]
+    fn invalid_create() {
+        match Request::try_from(String::new()) {
+            Ok(_) => panic!("bad request didn't error"),
+            Err(e) => assert_eq!(e, "empty request"),
+        };
+
+        match Request::try_from(String::from("OneLongWordWithNoSpaces")) {
+            Ok(_) => panic!("bad request didn't error"),
+            Err(e) => assert_eq!(e, "invalid start-line"),
+        };
+
+        match Request::try_from(String::from("GWT /")) {
+            Ok(_) => panic!("bad request didn't error"),
+            Err(e) => assert_eq!(e, "invalid method"),
+        };
+
+        match Request::try_from(String::from("GET / HTTP/1.1\nbad header")) {
+            Ok(_) => panic!("bad request didn't error"),
+            Err(e) => assert_eq!(e, "invalid header"),
+        };
+
+        match Request::try_from(String::from(
+            "GET / HTTP/1.1\ncontent-type:application/json\n\n[]",
+        )) {
+            Ok(_) => panic!("bad request didn't error"),
+            Err(e) => assert_eq!(e, "invalid body"),
+        };
+
+        match Request::try_from(String::from(
+            r#"GET / HTTP/1.1
+content-type:application/json
+
+{
+    "key
+}"#,
+        )) {
+            Ok(_) => panic!("bad request didn't error"),
+            Err(e) => assert_eq!(e, "invalid body"),
+        };
+    }
+
+    #[test]
     fn debug() {
-        let debug = format!("{:?}", Request::from("POST /db".to_string()));
+        let debug = format!("{:?}", Request::try_from("POST /db".to_string()).unwrap());
         assert_eq!(debug, "POST to /db");
 
-        let debug = format!("{:?}", Request::from("PATCH /".to_string()));
+        let debug = format!("{:?}", Request::try_from("PATCH /".to_string()).unwrap());
         assert_eq!(debug, "PATCH to /");
     }
 }

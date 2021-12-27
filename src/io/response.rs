@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use crate::io::status::Status;
+use crate::{io::status::Status, StatusCode};
 
 #[derive(Clone)]
 pub struct Response {
@@ -12,7 +12,7 @@ impl Response {
     pub fn new() -> Self {
         Self {
             content: String::new(),
-            status: Status::from(200),
+            status: Status::from(StatusCode::OK),
         }
     }
 
@@ -22,11 +22,11 @@ impl Response {
     {
         self.content = match fs::read_to_string(path) {
             Ok(content) => {
-                self.status = Status::from(200);
+                self.status = Status::from(StatusCode::OK);
                 content
             }
             Err(_) => {
-                self.status = Status::from(404);
+                self.status = Status::from(StatusCode::NotFound);
                 fs::read_to_string("static/404.html").unwrap()
             }
         };
@@ -36,6 +36,11 @@ impl Response {
     pub fn status(&mut self, status: impl Into<Status>) -> &mut Self {
         self.status = status.into();
         self
+    }
+
+    pub fn status_num(&mut self, status: usize) -> Result<&mut Self, &'static str> {
+        self.status = status.try_into()?;
+        Ok(self)
     }
 
     pub fn content(&mut self, content: String) -> &mut Self {
@@ -63,7 +68,8 @@ impl ToString for Response {
 impl Default for Response {
     fn default() -> Self {
         let mut res = Response::new();
-        res.serve_file("static/404.html").status(404);
+        res.serve_file("static/404.html")
+            .status(StatusCode::NotFound);
         res
     }
 }
