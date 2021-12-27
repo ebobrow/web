@@ -38,7 +38,7 @@ impl TryFrom<String> for Request {
 
         let mut headers = HashMap::new();
 
-        while let Some(line) = lines.next() {
+        for line in lines.by_ref() {
             if line.is_empty() {
                 break; // End of headers
             }
