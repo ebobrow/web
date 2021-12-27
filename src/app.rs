@@ -37,6 +37,20 @@ pub enum Method {
     PATCH,
 }
 
+impl From<&str> for Method {
+    fn from(s: &str) -> Self {
+        match s {
+            "GET" => Method::GET,
+            "POST" => Method::POST,
+            "PUT" => Method::PUT,
+            "DELETE" => Method::DELETE,
+            "TRACE" => Method::TRACE,
+            "PATCH" => Method::PATCH,
+            _ => panic!(),
+        }
+    }
+}
+
 type Cfg = Box<dyn Fn(Runtime) -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> + Send>;
 fn make_cfg<T>(f: fn(Runtime) -> T) -> Cfg
 where

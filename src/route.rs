@@ -10,7 +10,18 @@ pub struct Route {
 }
 
 impl Route {
-    pub fn from(route: impl ToString) -> Self {
+    pub fn params(&self, req: &Request) -> HashMap<String, String> {
+        self.segments
+            .iter()
+            .zip(&req.route.segments)
+            .filter(|(s, _)| s.starts_with(':'))
+            .map(|(s, o)| (s[1..].to_owned(), o.clone()))
+            .collect()
+    }
+}
+
+impl<T: ToString> From<T> for Route {
+    fn from(route: T) -> Self {
         Route {
             segments: route
                 .to_string()
@@ -19,15 +30,6 @@ impl Route {
                 .map(String::from)
                 .collect(),
         }
-    }
-
-    pub fn params(&self, req: &Request) -> HashMap<String, String> {
-        self.segments
-            .iter()
-            .zip(&req.route.segments)
-            .filter(|(s, _)| s.starts_with(':'))
-            .map(|(s, o)| (s[1..].to_owned(), o.clone()))
-            .collect()
     }
 }
 
@@ -85,7 +87,9 @@ mod tests {
         let mut request = Request {
             method: Method::GET,
             route: Route::from("/1"),
-            params: HashMap::new(),
+            params: Default::default(),
+            headers: Default::default(),
+            body: Default::default(),
         };
         request.populate_params(&endpoint);
 
