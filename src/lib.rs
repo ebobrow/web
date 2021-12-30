@@ -8,3 +8,4 @@ pub use app::App;
 pub use io::request::Request;
 pub use io::response::Response;
 pub use io::status::StatusCode;
+pub use macros::main;

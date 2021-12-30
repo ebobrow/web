@@ -2,7 +2,19 @@ use std::io;
 
 use web::{App, Request, Response, StatusCode};
 
-// TODO: This could be a macro like #[tokio::main]?
+// TODO: This kind of works but `app` isn't strongly typed
+// #[web::main]
+// fn main(app: Runtime) {
+//     app.log_with(|_| println!("special logger for home route"));
+//     app.get("/", home);
+
+//     app.log(); // Turn on default logger
+//     app.get("/a", a);
+//     app.get("/a", a2);
+//     app.get("/user/:name", user);
+//     app.post("/", post);
+// }
+
 fn main() -> io::Result<()> {
     App::new("127.0.0.1:3000", |mut app| async move {
         app.log_with(|_| println!("special logger for home route"));
