@@ -37,6 +37,7 @@ async fn home(_: Request, mut res: Response) -> Response {
 
 async fn a(_: Request, mut res: Response) -> Response {
     res.status(StatusCode::OK)
+        .set_cookie("token", "asdfasdfasdf")
         .content("you will never see this".to_string());
     res
 }

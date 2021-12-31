@@ -1,4 +1,4 @@
-use std::{fs, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 
 use crate::{io::status::Status, StatusCode};
 
@@ -6,6 +6,7 @@ use crate::{io::status::Status, StatusCode};
 pub struct Response {
     content: String,
     status: Status,
+    headers: HashMap<String, String>,
 }
 
 impl Response {
@@ -13,6 +14,7 @@ impl Response {
         Self {
             content: String::new(),
             status: Status::from(StatusCode::OK),
+            headers: HashMap::new(),
         }
     }
 
@@ -48,20 +50,31 @@ impl Response {
         self
     }
 
-    pub fn format_for_response(&self) -> String {
-        let status_line = format!("HTTP/1.1 {}", self.status);
-        format!(
-            "{}\r\nContent-Length: {}\r\n\r\n{}",
-            status_line,
-            self.content.len(),
-            self.content
-        )
+    pub fn set_cookie(&mut self, name: impl ToString, value: impl ToString) -> &mut Self {
+        // TODO: Make whole cookie struct with Expires, Secure, HTTPOnly, Path, etc.
+        self.headers.insert(
+            String::from("Set-Cookie"),
+            format!("{}={}", name.to_string(), value.to_string()),
+        );
+        self
     }
 }
 
 impl ToString for Response {
     fn to_string(&self) -> String {
-        self.format_for_response()
+        let status_line = format!("HTTP/1.1 {}", self.status);
+        let headers: String = self
+            .headers
+            .iter()
+            .map(|(k, v)| format!("\n{}: {}", k, v))
+            .collect();
+        format!(
+            "{}\r\nContent-Length: {}{}\r\n\r\n{}",
+            status_line,
+            self.content.len(),
+            headers,
+            self.content
+        )
     }
 }
 
@@ -81,12 +94,13 @@ mod tests {
     #[test]
     fn format_response() {
         let content = String::from("hello");
-
         let expected = "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello";
+        assert_eq!(Response::new().content(content).to_string(), expected);
 
+        let expected = "HTTP/1.1 200 OK\r\nContent-Length: 0\nSet-Cookie: key=value\r\n\r\n";
         assert_eq!(
-            Response::new().content(content).format_for_response(),
-            expected
+            expected,
+            Response::new().set_cookie("key", "value").to_string()
         );
     }
 }

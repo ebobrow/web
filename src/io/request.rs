@@ -10,6 +10,7 @@ pub struct Request {
     pub route: Route,
     pub params: HashMap<String, String>,
     pub headers: HashMap<String, String>,
+    pub cookies: HashMap<String, String>,
     pub body: Value,
 }
 
@@ -37,6 +38,7 @@ impl TryFrom<String> for Request {
         let route = header.next().ok_or("invalid start-line")?;
 
         let mut headers = HashMap::new();
+        let mut cookies = HashMap::new();
 
         for line in lines.by_ref() {
             if line.is_empty() {
@@ -44,9 +46,16 @@ impl TryFrom<String> for Request {
             }
 
             let (key, value) = line.split_once(':').ok_or("invalid header")?;
-            let mut value = value.to_lowercase();
-            value.retain(|c| !c.is_whitespace());
-            headers.insert(key.to_lowercase(), value);
+            if key.to_lowercase() == "cookie" {
+                for cookie in value.split(';') {
+                    let (k, v) = cookie.split_once('=').ok_or("invalid cookie")?;
+                    cookies.insert(k[1..].to_string(), v.to_string());
+                }
+            } else {
+                let mut value = value.to_lowercase();
+                value.retain(|c| !c.is_whitespace());
+                headers.insert(key.to_lowercase(), value);
+            }
         }
 
         let body = if let Some("application/json") = headers.get("content-type").map(|s| &s[..]) {
@@ -65,6 +74,7 @@ impl TryFrom<String> for Request {
             route: route.into(),
             params: HashMap::new(),
             headers,
+            cookies,
             body,
         })
     }
@@ -118,6 +128,16 @@ host: localhost:3000
         );
         assert_eq!(request.body["username"], Value::String("name".into()));
         assert_eq!(request.body["age"], Value::Number(123.into()));
+
+        let request = Request::try_from(String::from(
+            r#"GET / HTTP/1.1
+cookie: key=value; another=hi"#,
+        ))
+        .unwrap();
+        assert_eq!(request.method, Method::GET);
+        assert_eq!(request.route, Route { segments: vec![] });
+        assert_eq!(request.cookies.get("key"), Some(&"value".to_string()));
+        assert_eq!(request.cookies.get("another"), Some(&"hi".to_string()));
     }
 
     #[test]
@@ -159,6 +179,14 @@ content-type:application/json
         )) {
             Ok(_) => panic!("bad request didn't error"),
             Err(e) => assert_eq!(e, "invalid body"),
+        };
+
+        match Request::try_from(String::from(
+            r#"GET / HTTP/1.1
+cookie: badcookie"#,
+        )) {
+            Ok(_) => panic!("bad request didn't error"),
+            Err(e) => assert_eq!(e, "invalid cookie"),
         };
     }
 

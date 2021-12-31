@@ -121,7 +121,7 @@ impl Runtime {
 
         let res = std::mem::replace(&mut self.response, Box::pin(async { Response::default() }));
         self.stream
-            .write(res.await.format_for_response().as_bytes())
+            .write(res.await.to_string().as_bytes())
             .await
             .unwrap();
         self.stream.flush().await.unwrap();
@@ -139,7 +139,7 @@ impl Runtime {
 
         if route == self.request.route && method == self.request.method {
             self.identified = true;
-            self.log_route();
+            self.log_route(); // TODO: This triggers multiple times for multiple endpoints
 
             let mut req = self.request.clone();
             req.populate_params(&route);

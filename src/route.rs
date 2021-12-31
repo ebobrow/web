@@ -89,6 +89,7 @@ mod tests {
             route: Route::from("/1"),
             params: Default::default(),
             headers: Default::default(),
+            cookies: Default::default(),
             body: Default::default(),
         };
         request.populate_params(&endpoint);
