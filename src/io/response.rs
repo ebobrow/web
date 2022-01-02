@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs, path::Path};
 
-use crate::{io::status::Status, StatusCode};
+use crate::{cookie::Cookie, io::status::Status, StatusCode};
 
 #[derive(Clone)]
 pub struct Response {
@@ -50,11 +50,19 @@ impl Response {
         self
     }
 
-    pub fn set_cookie(&mut self, name: impl ToString, value: impl ToString) -> &mut Self {
-        // TODO: Make whole cookie struct with Expires, Secure, HTTPOnly, Path, etc.
+    pub fn set_cookie(&mut self, cookie: Cookie) -> &mut Self {
+        self.headers
+            .insert(String::from("Set-Cookie"), cookie.as_header());
+        self
+    }
+
+    pub fn delete_cookie(&mut self, name: impl ToString) -> &mut Self {
         self.headers.insert(
             String::from("Set-Cookie"),
-            format!("{}={}", name.to_string(), value.to_string()),
+            format!(
+                "{}=; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+                name.to_string()
+            ),
         );
         self
     }
@@ -100,7 +108,9 @@ mod tests {
         let expected = "HTTP/1.1 200 OK\r\nContent-Length: 0\nSet-Cookie: key=value\r\n\r\n";
         assert_eq!(
             expected,
-            Response::new().set_cookie("key", "value").to_string()
+            Response::new()
+                .set_cookie(Cookie::new("key", "value"))
+                .to_string()
         );
     }
 }

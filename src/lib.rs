@@ -1,4 +1,5 @@
 pub mod app;
+pub mod cookie;
 pub mod io;
 mod route;
 
