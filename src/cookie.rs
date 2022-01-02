@@ -1,4 +1,8 @@
-#[derive(Debug)]
+use std::time::SystemTime;
+
+use httpdate::fmt_http_date;
+
+#[derive(Debug, Clone)]
 pub enum SameSite {
     /// means that the browser sends the cookie only for same-site requests, that is, requests
     /// originating from the same site that set the cookie. If a request originates from a URL
@@ -22,10 +26,11 @@ impl ToString for SameSite {
     }
 }
 
+#[derive(Clone)]
 pub struct Cookie {
     name: String,
     value: String,
-    expires: Option<String>, // TODO: Date helper?
+    expires: Option<SystemTime>, // can use SystemTime::from(chrono::DateTime)
     max_age: Option<i32>,
     domain: Option<String>,
     path: Option<String>,
@@ -50,8 +55,8 @@ impl Cookie {
     }
 
     // TODO: A lot of redundancy--macros?
-    pub fn expires(mut self, expires: impl ToString) -> Self {
-        self.expires = Some(expires.to_string());
+    pub fn expires(mut self, expires: SystemTime) -> Self {
+        self.expires = Some(expires);
         self
     }
 
@@ -89,7 +94,7 @@ impl Cookie {
         let mut header = format!("{}={}", self.name, self.value);
         if let Some(expires) = &self.expires {
             header.push_str("; Expires=");
-            header.push_str(expires);
+            header.push_str(&fmt_http_date(*expires));
         }
         if let Some(max_age) = &self.max_age {
             header.push_str("; Max-Age=");
@@ -126,14 +131,18 @@ mod tests {
             "name=value; SameSite=Lax"
         );
 
+        let now = SystemTime::now();
         assert_eq!(
             Cookie::new("a", "b")
-                .expires("Wed, 21 Oct 2015 07:28:00 GMT")
+                .expires(now)
                 .path("/")
                 .secure(true)
                 .same_site(SameSite::None)
                 .as_header(),
-            "a=b; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; Secure; SameSite=None"
+            format!(
+                "a=b; Expires={}; Path=/; Secure; SameSite=None",
+                fmt_http_date(now)
+            )
         );
     }
 }
