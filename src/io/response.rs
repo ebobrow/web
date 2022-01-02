@@ -18,7 +18,7 @@ impl Response {
         }
     }
 
-    pub fn serve_file<P>(&mut self, path: P) -> &mut Self
+    pub fn serve_file<P>(mut self, path: P) -> Self
     where
         P: AsRef<Path>,
     {
@@ -35,28 +35,28 @@ impl Response {
         self
     }
 
-    pub fn status(&mut self, status: impl Into<Status>) -> &mut Self {
+    pub fn status(mut self, status: impl Into<Status>) -> Self {
         self.status = status.into();
         self
     }
 
-    pub fn status_num(&mut self, status: usize) -> Result<&mut Self, &'static str> {
+    pub fn status_num(mut self, status: usize) -> Result<Self, &'static str> {
         self.status = status.try_into()?;
         Ok(self)
     }
 
-    pub fn content(&mut self, content: String) -> &mut Self {
+    pub fn content(mut self, content: String) -> Self {
         self.content = content;
         self
     }
 
-    pub fn set_cookie(&mut self, cookie: Cookie) -> &mut Self {
+    pub fn set_cookie(mut self, cookie: Cookie) -> Self {
         self.headers
             .insert(String::from("Set-Cookie"), cookie.as_header());
         self
     }
 
-    pub fn delete_cookie(&mut self, name: impl ToString) -> &mut Self {
+    pub fn delete_cookie(mut self, name: impl ToString) -> Self {
         self.headers.insert(
             String::from("Set-Cookie"),
             format!(
@@ -88,10 +88,9 @@ impl ToString for Response {
 
 impl Default for Response {
     fn default() -> Self {
-        let mut res = Response::new();
-        res.serve_file("static/404.html")
-            .status(StatusCode::NotFound);
-        res
+        Response::new()
+            .serve_file("static/404.html")
+            .status(StatusCode::NotFound)
     }
 }
 
@@ -105,7 +104,8 @@ mod tests {
         let expected = "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello";
         assert_eq!(Response::new().content(content).to_string(), expected);
 
-        let expected = "HTTP/1.1 200 OK\r\nContent-Length: 0\nSet-Cookie: key=value\r\n\r\n";
+        let expected =
+            "HTTP/1.1 200 OK\r\nContent-Length: 0\nSet-Cookie: key=value; SameSite=Lax\r\n\r\n";
         assert_eq!(
             expected,
             Response::new()

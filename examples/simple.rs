@@ -30,32 +30,27 @@ fn main() -> io::Result<()> {
     })
 }
 
-async fn home(_: Request, mut res: Response) -> Response {
-    res.serve_file("examples/static/hello.html");
-    res // TODO: can this be mutated in place?
+async fn home(_: Request, res: Response) -> Response {
+    res.serve_file("examples/static/hello.html")
 }
 
-async fn a(_: Request, mut res: Response) -> Response {
+async fn a(_: Request, res: Response) -> Response {
     res.status(StatusCode::OK)
         .set_cookie(Cookie::new("token", "asdfasdfasdf"))
-        .content("you will never see this".to_string());
-    res
+        .content("you will never see this".to_string())
 }
 
-async fn a2(_: Request, mut res: Response) -> Response {
-    res.content("hi".to_string());
-    res
+async fn a2(_: Request, res: Response) -> Response {
+    res.content("hi".to_string())
 }
 
-async fn user(req: Request, mut res: Response) -> Response {
+async fn user(req: Request, res: Response) -> Response {
     let name = req.params.get("name").unwrap();
     res.content(format!("Hello, {}", name))
-        .status(StatusCode::OK);
-    res
+        .status(StatusCode::OK)
 }
 
-async fn post(req: Request, mut res: Response) -> Response {
+async fn post(req: Request, res: Response) -> Response {
     res.status(StatusCode::OK)
-        .content(format!("Your username is {}", req.body["username"]));
-    res
+        .content(format!("Your username is {}", req.body["username"]))
 }
