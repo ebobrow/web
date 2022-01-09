@@ -91,6 +91,7 @@ pub struct Runtime {
     stream: TcpStream,
     logging: Option<Box<dyn Fn(&Request) + Send>>,
     identified: bool,
+    logged: bool,
     request: Request,
     response: Pin<Box<dyn Future<Output = Response> + Send + 'static>>,
 }
@@ -103,6 +104,7 @@ impl Runtime {
             stream,
             logging: None,
             identified: false,
+            logged: false,
             request: Request::try_from(&buffer).unwrap(),
             response: Box::pin(async { Response::default() }),
         };
@@ -128,9 +130,12 @@ impl Runtime {
     }
 
     // Bad naming again
-    fn log_route(&self) {
+    fn log_route(&mut self) {
         if let Some(logger) = &self.logging {
-            logger(&self.request);
+            if !self.logged {
+                logger(&self.request);
+                self.logged = true;
+            }
         }
     }
 
@@ -139,7 +144,7 @@ impl Runtime {
 
         if route == self.request.route && method == self.request.method {
             self.identified = true;
-            self.log_route(); // TODO: This triggers multiple times for multiple endpoints
+            self.log_route();
 
             let mut req = self.request.clone();
             req.populate_params(&route);
