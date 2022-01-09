@@ -1,6 +1,7 @@
 use std::time::SystemTime;
 
 use httpdate::fmt_http_date;
+use macros::Builder;
 
 #[derive(Debug, Clone)]
 pub enum SameSite {
@@ -26,7 +27,7 @@ impl ToString for SameSite {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Builder)]
 pub struct Cookie {
     name: String,
     value: String,
@@ -52,42 +53,6 @@ impl Cookie {
             http_only: false,
             same_site: SameSite::Lax,
         }
-    }
-
-    // TODO: A lot of redundancy--macros?
-    pub fn expires(mut self, expires: SystemTime) -> Self {
-        self.expires = Some(expires);
-        self
-    }
-
-    pub fn max_age(mut self, max_age: i32) -> Self {
-        self.max_age = Some(max_age);
-        self
-    }
-
-    pub fn domain(mut self, domain: impl ToString) -> Self {
-        self.domain = Some(domain.to_string());
-        self
-    }
-
-    pub fn path(mut self, path: impl ToString) -> Self {
-        self.path = Some(path.to_string());
-        self
-    }
-
-    pub fn secure(mut self, secure: bool) -> Self {
-        self.secure = secure;
-        self
-    }
-
-    pub fn http_only(mut self, http_only: bool) -> Self {
-        self.http_only = http_only;
-        self
-    }
-
-    pub fn same_site(mut self, same_site: SameSite) -> Self {
-        self.same_site = same_site;
-        self
     }
 
     pub(crate) fn as_header(&self) -> String {

@@ -2,6 +2,8 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, FnArg, Pat};
 
+mod builder;
+
 #[proc_macro_attribute]
 pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let item = match parse_macro_input!(item as syn::Item) {
@@ -33,4 +35,9 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
     TokenStream::from(expanded)
+}
+
+#[proc_macro_derive(Builder, attributes(builder))]
+pub fn derive_builder(input: TokenStream) -> TokenStream {
+    builder::builder(input)
 }
