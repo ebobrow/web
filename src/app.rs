@@ -1,7 +1,7 @@
 use std::{
     future::Future,
     io,
-    net::{SocketAddr, ToSocketAddrs},
+    net::ToSocketAddrs,
     pin::Pin,
     sync::{Arc, Mutex},
 };
@@ -79,11 +79,6 @@ macro_rules! add_endpoint {
             self.endpoint(route, make_handler(handler), $method);
         }
     };
-}
-
-pub struct App {
-    addr: SocketAddr,
-    cfg: Cfg,
 }
 
 // For lack of a better name
@@ -171,28 +166,20 @@ impl Runtime {
     }
 }
 
-impl App {
-    #[tokio::main]
-    pub async fn new<A: ToSocketAddrs, T>(addr: A, cfg: fn(Runtime) -> T) -> io::Result<()>
-    where
-        T: Future<Output = ()> + Send + 'static,
-    {
-        let addr = addr.to_socket_addrs()?.find(|_| true).unwrap();
+#[tokio::main]
+pub async fn listen_on<A: ToSocketAddrs, T>(addr: A, cfg: fn(Runtime) -> T) -> io::Result<()>
+where
+    T: Future<Output = ()> + Send + 'static,
+{
+    let addr = addr.to_socket_addrs()?.find(|_| true).unwrap();
+    let listener = TcpListener::bind(addr).await?;
 
-        let app = Self {
-            addr,
-            cfg: make_cfg(cfg),
-        };
-
-        let listener = TcpListener::bind(app.addr).await?;
-
-        let cfg = Arc::new(Mutex::new(app.cfg));
-        loop {
-            let (socket, _) = listener.accept().await?;
-            let cfg = cfg.clone();
-            tokio::spawn(async move {
-                Runtime::run(socket, cfg).await;
-            });
-        }
+    let cfg = Arc::new(Mutex::new(make_cfg(cfg)));
+    loop {
+        let (socket, _) = listener.accept().await?;
+        let cfg = cfg.clone();
+        tokio::spawn(async move {
+            Runtime::run(socket, cfg).await;
+        });
     }
 }

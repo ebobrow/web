@@ -1,6 +1,6 @@
 use std::io;
 
-use web::{cookie::Cookie, App, Request, Response, StatusCode};
+use web::{app, cookie::Cookie, Request, Response, StatusCode};
 
 // TODO: This kind of works but `app` isn't strongly typed
 // #[web::main]
@@ -16,7 +16,7 @@ use web::{cookie::Cookie, App, Request, Response, StatusCode};
 // }
 
 fn main() -> io::Result<()> {
-    App::new("127.0.0.1:3000", |mut app| async move {
+    app::listen_on("127.0.0.1:3000", |mut app| async move {
         app.log_with(|_| println!("special logger for home route"));
         app.get("/", home);
 
